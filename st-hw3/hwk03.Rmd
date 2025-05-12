@@ -1,0 +1,377 @@
+---
+title: "Homework 3, Applied Methods in Statistics, Spring 2025"
+output: html_document
+date: "Due on 2025/5/14"
+---
+
+The Wisconsin Diabetes Registry Study targeted all individuals $<30$ years of age diagnosed with Type I diabetes in southern Wisconsin, USA. Participants were requested to submit blood samples and were sent a questionnaire inquiring about hospitalizations and other events. The blood samples were used to determine glycosylated hemoglobin (GHb), and important indicator of glycemic control.
+
+The data set `diabetes.csv`, which can be downloaded from e3 under "Homework 3", contains the data from the Wisconsin Diabetes Registry Study. The data items are: 
+
+| Variable name | meaning                                                                       |
+| --------------| ----------------------------------------------------------------------------- |
+| ID            | an unique identification number                                               |
+| HEALTH        | self-reported health status: 1=excellent, 2=good, 3=fair, 4=poor              |
+| BH            | dichotomized health status: 1=excellent health, 0=worse than excellent health |
+| GENDER        | sex code: 1=female, 0=male                                                    |
+| GHb           | overal mean glycosylated hemoglobin value in study                            |
+| AGE           | age at diagnosis (years)                                                      |
+|               |                                                                               |
+
+In the following Problems 1-5, we are interested in the relationship of GHb with age at diagnosis and/or self-reported health status.
+
+# Problem 1 
+
+> Fit a linear regression to investigate the association between GHb and age at diagnosis.
+
+> a. (5 points) Is the square term of AGE needed? 
+> b. (5 points) What does your final model tell us (i.e., interpret the regression coefficients)?
+
+```{r}
+# 匯入資料
+data <- read.csv("diabetes.csv")
+
+# 檢查資料結構
+str(data)
+
+# 繪製散佈圖檢視 GHb 與 AGE 的關係
+plot(data$AGE, data$GHb, main = "Scatterplot of GHb vs AGE", 
+     xlab = "AGE at diagnosis", ylab = "GHb", pch = 19)
+
+# 建立線性與二次模型
+model_linear <- lm(GHb ~ AGE, data = data)
+model_quad <- lm(GHb ~ AGE + I(AGE^2), data = data)
+
+# 查看平方項是否顯著
+# summary(model_quad)  # 檢查 I(AGE^2) 的 p-value
+
+# 比較兩個模型是否有顯著差異（檢定平方項是否必要）
+anova(model_linear, model_quad)
+
+```
+a. 
+是的，需要平方項，ANOVA 結果中顯示 p-value = 0.000113 < 0.05，表示二次模型比線性模型顯著更好，表示加入平方項會顯著改善模型擬合。
+
+b. 
+
+$$
+GHb = 10.444 + 0.140 ⋅ AGE − 0.0060 ⋅ AGE^{2}
+$$
+ 
+- 截距 (10.444)：當 AGE = 0 時（理論上的起點），GHb 的預測值約為 10.444。
+- AGE 的係數為正 (0.140)：在 AGE 較小時，AGE 每增加 1 歲，GHb 會上升約 0.14 單位。
+- AGE² 的係數為負 (-0.0060)：表示 GHb 與 AGE 之間的關係不是單調上升，而是呈拋物線型關係。隨著 AGE 增加，GHb 先上升後下降。
+
+代表在某個年齡點之後，血糖控制（GHb）會逐漸改善，可能與年齡對自我照顧能力的影響有關。 <br>
+
+GHb 與年齡的關係呈現拋物線型，表示年紀較小或較大的患者 GHb 水準可能較低，而中間年齡層的 GHb 值可能偏高。
+
+# Problem 2 
+
+> Now fit a linear regression model for GHb versus self-reported health status. 
+
+> a. (5 points) Create dummy variables for self-reported health status, using the group that has the highest mean GHb value as the baseline. Which group is the baseline? (Note: when creating dummy variables, pay attention to the missing values in HEALTH).
+> b. (5 points) What is the interpretation of regression coefficients?
+
+```{r}
+# 移除 HEALTH 或 GHb 有缺失值的觀察值
+health_data <- na.omit(data[, c("GHb", "HEALTH")])
+
+# 計算每組的 GHb 平均值
+aggregate(GHb ~ HEALTH, data = health_data, mean)
+
+```
+
+```{r}
+# 將 HEALTH 設為 factor，並指定 baseline 為 "3"
+data$HEALTH <- factor(data$HEALTH, levels = c(3, 1, 2, 4))  
+
+# 建立迴歸模型
+model_health <- lm(GHb ~ HEALTH, data = data)
+summary(model_health)
+
+```
+a. Which group is the baseline? <br>
+
+Baseline 是 self-reported health = 3 (fair)，因為其 GHb 平均值最高（12.081）。<br>
+
+b. What is the interpretation of regression coefficients? <br>
+
+- Intercept（12.0810）：當 HEALTH = 3（fair）時，平均 GHb 為 12.081。
+- HEALTH1（-1.4581）：與 fair 相比，excellent 健康者的 GHb 平均值顯著較低，低了約 1.46 單位（p < 0.001）。
+- HEALTH2（-0.9439）：與 fair 相比，good 健康者的 GHb 平均值顯著較低，低了約 0.94 單位（p < 0.01）。
+- HEALTH4（-0.6957）：與 fair 相比，poor 健康者的 GHb 平均值較低，但差異不顯著（p = 0.646）。
+
+
+# Problem 3
+
+(10 points) Based on the results of Problems 1 and 2, study the relationship of GHb with age at diagnosis and self-reported health status. Is self-reported health status significantly associated with GHb after adjusting for age at diagnosis, and vice versa?
+
+
+```{r}
+# 設定 HEALTH 為因類別型變數，baseline 設為 3（fair）
+data$HEALTH <- factor(data$HEALTH, levels = c(3, 1, 2, 4))
+
+# 移除缺失值
+clean_data <- na.omit(data[, c("GHb", "AGE", "HEALTH")])
+
+# 擬合包含 AGE 及 HEALTH 的模型
+model_both <- lm(GHb ~ AGE + I(AGE^2) + HEALTH, data = clean_data)
+summary(model_both)
+
+```
+
+在同時考慮「診斷年齡」與「自評健康狀態」的情況下：
+
+- 自評健康狀態（HEALTH）在控制年齡後，仍與 GHb 顯著相關。
+- 報告為「excellent（健康狀況極佳）」或「good（良好）」的個體，其 GHb 值平均顯著低於報告為「fair（普通）」的人。這表示健康自評較佳者，其血糖控制可能也較好。
+- 報告為「poor（差）」的組別與「fair」相比，GHb 並無顯著差異。
+- 診斷年齡與 GHb 之間呈現非線性關係，即使控制健康狀態後仍顯著。
+- $AGE$ 的正係數與 $AGE^{2}$ 的負係數顯示：GHb 會隨著診斷年齡上升而先增加，之後轉為下降，呈現拋物線型關係。
+
+
+# Problem 4
+
+> Now we need a model that allows the association between GHb and AGE varies across different health status groups. The square term of AGE is not contained in the model.
+
+> a. (5 points) What is the model? 
+> b. (5 points) For each health status group, what is the mean GHb change per one-year incresae in AGE (the slope)?
+
+交互作用項（例如 AGE × HEALTH1）會成為一個新的獨立變數，用來衡量在 HEALTH = 1 的群體中，AGE 對 GHb 的影響是否不同於 baseline 群體（HEALTH = 4）。
+
+
+```{r}
+model_interact <- lm(GHb ~ AGE * HEALTH, data = data)
+summary(model_interact)
+
+```
+
+
+a. What is the model?  <br>
+$$
+\begin{aligned}
+\text{GHb} =\ &11.204 +\ 0.06494 \cdot \text{AGE} \\
+&- 0.2565 \cdot \text{HEALTH}_1 +\ 0.5731 \cdot \text{HEALTH}_2 -\ 0.0055 \cdot \text{HEALTH}_4 \\
+&- 0.09660 \cdot (\text{AGE} \times \text{HEALTH}_1) \\
+&- 0.12214 \cdot (\text{AGE} \times \text{HEALTH}_2) \\
+&- 0.05291 \cdot (\text{AGE} \times \text{HEALTH}_4)
+\end{aligned}
+$$
+
+其中基準組為 HEALTH=3 (fair)。 <br>
+
+b. For each health status group, what is the mean GHb change per one-year incresae in AGE (the slope)?
+
+$$
+\begin{aligned}
+\text{Slope}_{\text{HEALTH}=3} &= 0.06494 \\
+\text{Slope}_{\text{HEALTH}=1} &= 0.06494 - 0.09660 = -0.03166 \\
+\text{Slope}_{\text{HEALTH}=2} &= 0.06494 - 0.12214 = -0.05720 \\
+\text{Slope}_{\text{HEALTH}=4} &= 0.06494 - 0.05291 = 0.01203
+\end{aligned}
+$$
+
+
+# Problem 5
+
+(10 points) Draw various diagnostic plots (e.g., the q-q plot, the (studentized)-residuals-versus-predicted-values plot) of the model in Problem 4. 
+Do you find any outliers/extreme points? 
+Are there any model assumptions being violated?
+
+```{r}
+model_interact <- lm(GHb ~ AGE * HEALTH, data = data)
+
+# 基本診斷圖
+par(mfrow = c(2, 2))  # 2x2 圖形視窗
+plot(model_interact)
+
+
+```
+
+- Residuals vs Fitted（左上圖）
+殘差大致分布在 0 上下，但有部分呈扇形擴散，可能隱含異變異性（heteroscedasticity）。
+
+- Normal Q-Q Plot（右上圖）
+殘差在兩端明顯偏離對角線，表示殘差偏離常態分布，存在 heavy tails。
+
+- Scale-Location（左下圖）
+√|標準化殘差| 對 fitted 值圖顯示變異量隨預測值略有增加傾向，也支持異變異性的存在。
+
+- Residuals vs Leverage（右下圖）
+有少數觀測值（如編號 273、369、5470）距離其他點遠，顯示可能為 high leverage points 或 outliers，其中 5470 接近 Cook's distance 警示線。
+
+ 
+## Do you find any outliers/extreme points? 
+Q-Q plot 中右上角觀察值（編號：273, 369, 547, 530）偏離常態直線，表示可能為 異常大或小的殘差。
+
+Residuals vs Fitted plot 中這些點也呈現出大於 ±3 的 standardized residual，屬於「潛在離群值（outliers）」。
+
+Residuals vs Leverage 中的 547 號觀測值 具有 高 leverage + 中等 residual，且其 Cook’s distance 接近 0.5，屬於「可能影響模型的極端點（influential point）」。
+
+是的，模型中存在數個 潛在離群值與極端點，特別是第 547、273、369 號觀測值。
+
+## Are there any model assumptions being violated?
+
+模型大致滿足線性迴歸的基本假設，但存在一些輕微違反，包括：
+<br>
+殘差的尾端偏離常態（少數 outliers）
+<br>
+輕度異質變異（右側 fitted 值下殘差變大）
+<br>
+個別高影響點（547 號）
+
+In the following Problems 6-10, always use BH as the dependent variable (response variable).
+
+# Problem 6
+
+(10 points) Use logistic regression to obtain the crude odds ratio as well as the age adjusted odds ratio for sex versus dichotomized health status (use age as a continuous variable).
+
+```{r}
+data$BH <- as.factor(data$BH)
+data$GENDER <- as.factor(data$GENDER)  # 1 = female, 0 = male
+
+# 模型 1：Crude OR
+model_crude <- glm(BH ~ GENDER, data = data, family = binomial)
+summary(model_crude)
+exp(coef(model_crude))  # 取得 OR
+
+# 模型 2：Age-adjusted OR
+model_adjusted <- glm(BH ~ GENDER + AGE, data = data, family = binomial)
+summary(model_adjusted)
+exp(coef(model_adjusted))  # 取得 adjusted OR
+
+```
+
+### Crude Odds Ratio
+
+- GENDER1 係數 = -0.4393
+- OR = exp(-0.4393) = 0.6444
+- p-value = 0.0109 → 顯著
+
+在未控制其他變項的情況下，女性（GENDER = 1）相比男性，有 0.644 倍的勝算被評為 "excellent health"，p 值為 0.0109，具有統計顯著性。
+
+### Age-adjusted Model（加入 AGE）
+
+- GENDER1 係數 = -0.4468 → OR = exp(-0.4468) = 0.6397
+- AGE 係數 = -0.03716 → OR = exp(-0.03716) = 0.9635
+- GENDER1 p-value = 0.0101，AGE p-value = 0.0059 → 皆顯著
+
+在控制年齡之後，女性被評為 "excellent health" 的勝算仍顯著低於男性，OR 為 0.6397，p 值為 0.0101。
+此外，年齡越大，勝算越低：每增加一歲，為 "excellent health" 的勝算下降約 3.65%（OR = 0.9635，p = 0.0059）。
+
+
+# Problem 7
+
+(10 points) Create an age stratum variable (values 1=$\mbox{age}\leq 7$, 2=$7<\mbox{age}\leq 11$, 3=$11<\mbox{age}\leq 15$, 4=$15<\mbox{age}$), and corresponding dummy variables, using ages 0-7 as the baseline group. Use logistic regression to obtain age-stratum adjusted odds ratios for sex versus dichotomized health status.
+
+```{r}
+# 建立 age stratum 變數（1: <=7, 2: 7~11, 3: 11~15, 4: >15）
+data$AGE_STRATUM <- cut(
+  data$AGE,
+  breaks = c(-Inf, 7, 11, 15, Inf),
+  labels = c("1", "2", "3", "4"),
+  right = TRUE
+)
+
+# 設定 baseline 為 stratum 1
+data$AGE_STRATUM <- relevel(factor(data$AGE_STRATUM), ref = "1")
+
+# 邏輯斯回歸：以性別與年齡分層為解釋變數，BH 為反應變數
+model_strat <- glm(BH ~ GENDER + AGE_STRATUM, family = binomial, data = data)
+summary(model_strat)
+
+# 勝算比 (OR)
+exp(coef(model_strat))
+```
+
+
+# Problem 8
+
+(10 points) Comment on whether the adjusted odds ratio for sex versus health status is different with the two ways of adjusting for age (i.e., compare adjusting for continuous age versus adjusting for age strata). What assumptions do you make in each way of adjusting for age? Which analysis is more appropriate?
+
+| 模型            | 調整方式     | GENDER1 OR | p-value    |
+| ------------- | -------- | ---------- | ---------- |
+| **Problem 6** | 年齡為連續變數  | **0.6397** | **0.0101** |
+| **Problem 7** | 年齡分層（類別） | **0.6326** | **0.0089** |
+
+
+在這兩種模型中，女性相對男性被評為 excellent health 的勝算比皆約為 0.63 ~ 0.64，且皆具統計顯著性，表示不論用哪種方式調整年齡，性別與健康狀態的關聯皆穩定存在。
+
+### What assumptions
+
+| 調整方式         | 模型假設與限制                                    |
+| ------------ | ------------------------------------------ |
+| **連續變數**     | 假設年齡與 log(勝算) 間為線性關係。簡潔但可能忽略年齡對健康的非線性影響。   |
+| **年齡分層（類別）** | 無需假設年齡與 log(勝算) 為線性，可處理年齡對結果的非線性或閾值效應。更彈性。 |
+
+### Which analysis is more appropriate?
+
+- 本題中以年齡分層方式進行調整更合適，能更精確捕捉年齡與健康間潛在的非線性關係。
+
+# Problem 9
+
+(10 points) Interpret the odds ratios for age in the two logistic regression approaches above (i.e., one adjusted for continuous age and one adjusted for age strata).
+
+
+### one adjusted for continuous age
+
+- AGE 係數（Estimate） = -0.03716
+- OR = $\exp(-0.03716) = \textbf{0.9635}$
+- p-value = 0.0059（顯著）
+
+<br>當年齡以連續變數納入模型時，結果顯示：每增加 1 歲，個體為 "excellent health" 的勝算會下降約 3.65%。此結果具有統計顯著性，表示年齡與健康狀態間存在顯著的負向關聯，且影響為線性變化。
+
+### one adjusted for age strata
+
+| 年齡層 (AGE\_STRATUM) | Estimate | OR (exp(β)) | p-value    | 解釋             |
+| ------------------ | -------- | ----------- | ---------- | -------------- |
+| 2（7 < age ≤ 11）    | +0.00495 | 1.0049      | 0.983      | 與 baseline 無差異 |
+| 3（11 < age ≤ 15）   | -0.38139 | 0.6829      | 0.110      | 勝算下降，但不顯著      |
+| 4（age > 15）        | -0.68846 | **0.5024**  | **0.0053** | 勝算顯著下降，健康機率較低  |
+
+在年齡分層模型中，與 7 歲以下者相比，15 歲以上者有顯著較低的勝算為 excellent health，其勝算約為年幼者的一半（OR = 0.50）。但在其他年齡層（7–15 歲）中，勝算下降未達顯著水準。
+
+在連續年齡模型中，年齡每增加 1 歲，勝算平均下降 3.65%（OR = 0.9635，p = 0.0059），假設影響為線性。
+
+而在年齡分層模型中，僅年齡大於 15 歲的族群顯示出顯著勝算下降（OR = 0.5024，p = 0.0053），其餘分層雖有下降趨勢，但未達顯著水準。
+
+
+# Problem 10
+
+(10 points) Add GHb to the logistic regression in Problem 7. Examine whether GHb interacts with sex in its relationship with binary self reported health status. Interpret the odds ratio for GHb with and without the interaction term between sex and GHb.
+
+```{r}
+model_no_interaction <- glm(BH ~ GENDER + AGE_STRATUM + GHb, family = binomial, data = data)
+summary(model_no_interaction)
+exp(coef(model_no_interaction))
+
+model_with_interaction <- glm(BH ~ GENDER * GHb + AGE_STRATUM, family = binomial, data = data)
+summary(model_with_interaction)
+exp(coef(model_with_interaction))
+
+```
+
+### no_interaction
+
+| 變數  | Estimate | OR（exp(β)） | p-value      |
+| --- | -------- | ---------- | ------------ |
+| GHb | -0.1896  | **0.8273** | **6.39e-05** |
+
+GHb 每增加 1 單位，被評為 "excellent health" 的勝算約下降 17.3%，此結果具有高度顯著性，說明 GHb 與健康狀態之間存在顯著負向關係。
+
+### with interaction
+
+| 變數           | Estimate | OR（exp(β)） | p-value     |
+| ------------ | -------- | ---------- | ----------- |
+| GHb          | -0.1784  | **0.8366** | **0.00372** |
+| GENDER1      | -0.1946  | 0.8232     | 0.8468      |
+| GENDER1\:GHb | -0.0259  | 0.9744     | **0.7771**  |
+
+- 主效應 GHb 仍顯著：GHb 每上升 1 單位，excellent health 的勝算下降約 16.3%，此結果仍具統計意義。
+- GENDER1:GHb 交互項的 p 值 = 0.7771，表示性別並未顯著影響 GHb 對健康的作用，GHb 對健康的影響在男女之間相近。
+
+<br>
+GHb 與性別之間沒有顯著的交互作用，因此可採用no_interaction的模型作為解釋。
+
+
+
