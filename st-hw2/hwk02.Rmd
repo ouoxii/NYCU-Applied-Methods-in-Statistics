@@ -18,14 +18,14 @@ FEV (forced expiratory volume) is an index of pulmonary function that measures t
 | smoke    | Parental Smoking status  | 0=non-smoker; 1=smoker |
 |          |                          |                        |
 
-a.  (10 points) Suppose that we want to assess if the mean FEV is equal to 2.5 among boys with  ages 8-12 and heights 57-65. Perform a hypothesis testing. Please report the appropriate null and alternative hypotheses, the p-value and your conclusion in words. 
+> a.  (10 points) Suppose that we want to assess if the mean FEV is equal to 2.5 among boys with  ages 8-12 and heights 57-65. Perform a hypothesis testing. Please report the appropriate null and alternative hypotheses, the p-value and your conclusion in words. 
 
 
 \(H_0\): \(\mu = 2.5\)（男孩此族群的平均 FEV 為 2.5）<br>
 \(H_1\): \(\mu \neq 2.5\)（男孩此族群的平均 FEV 不等於 2.5）<br>
 
 
-**檢定方法與解釋：**  
+### 檢定方法與解釋
 採用單一樣本 \(t\) 檢定。首先從資料中篩選出符合條件（性別為男、年齡介於 8 至 12 歲、身高介於 57 至 65 英吋）的子樣本，<br>
 ```{r}
 # 讀取 FEV.csv 檔案
@@ -68,14 +68,14 @@ print(t_test_result)
 
 計算結果得到 \(t \approx -0.40\)，對應 degrees of freedom 125 的 \(p\)-value 為 0.6868。
 
-**conclusion：**  
+### **conclusion**  
 由於 \(p\)-value 大於 0.05，無法拒絕 \(H_0\): \(\mu = 2.5\)（男孩此族群的平均 FEV 為 2.5）; <br>因此，沒有足夠證據顯示該族群的平均 FEV 與 2.5 有顯著差異。
 
 
 ---
 
 
-b.  (10 points) Suppose that we are also interested in comparing if boys and girls have the same FEV. Please perform a hypothesis testing to assess it, reporting the null and alternative hypotheses, the p-value and your conclusion in words. (Note: For the purpose of this exercise, assume equal variance where appropriate.) 
+> b.  (10 points) Suppose that we are also interested in comparing if boys and girls have the same FEV. Please perform a hypothesis testing to assess it, reporting the null and alternative hypotheses, the p-value and your conclusion in words. (Note: For the purpose of this exercise, assume equal variance where appropriate.) 
 
 \(H_0: \mu_{\text{boys}} = \mu_{\text{girls}}\) 表示男孩與女孩的平均 FEV 相等。<br>
 \(H_1: \mu_{\text{boys}} \neq \mu_{\text{girls}}\)表示男孩與女孩的平均 FEV 不相等。<br>
@@ -96,12 +96,12 @@ print(t_test_result)
 
 計算結果得到 \(t \approx -1.27\)，對應 degrees of freedom 289 的 \(p\)-value 為 0.2042。
 
-**conclusion：**  
+### **conclusion**
 由於 \(p\)-value 大於 0.05，\(H_0: \mu_{\text{boys}} = \mu_{\text{girls}}\) 表示男孩與女孩的平均 FEV 相等; <br>因此，沒有足夠的證據支持男孩與女孩在 FEV 平均值上存在顯著差異。
 
 
 
-c.  (10 points) Another aspect of the study involves looking if the data reflects the fact that a person’s pulmonary function declines with age. Suppose we test this hypothesis by looking at children ages 8-12 and heights 57-65 inches and measuring their FEV initially and then once again 2 years later. The FEV measurements in the data set `FEV.csv` are the baseline measurements. The data set `FEV2.csv` (from e3 under "Homework 2") contains two variables: the first variable is the ID number, and the second variable is the children’s FEV measurements 2 years later. What are the appropriate null and alternative hypotheses in this case? Perform a statistical analysis. Interpret in words.
+> c.  (10 points) Another aspect of the study involves looking if the data reflects the fact that a person’s pulmonary function declines with age. Suppose we test this hypothesis by looking at children ages 8-12 and heights 57-65 inches and measuring their FEV initially and then once again 2 years later. The FEV measurements in the data set `FEV.csv` are the baseline measurements. The data set `FEV2.csv` (from e3 under "Homework 2") contains two variables: the first variable is the ID number, and the second variable is the children’s FEV measurements 2 years later. What are the appropriate null and alternative hypotheses in this case? Perform a statistical analysis. Interpret in words.
 
 
 \(H_0: \mu_{\text{baseline}} = \mu_{\text{2years}}\) 表示兩次測量的平均 FEV 相等。 <br>
@@ -132,11 +132,11 @@ print(t_test_result)
 
 計算結果得到 \(t \approx 1.88\)，對應 degrees of freedom:  653 的 \(p\)-value 為 0.03。
 
-**conclusion：**  
-由於 \(p\)-value 小於 0.05，拒絕\(H_0: \mu_{\text{d}} = 0\)  表示兩次測量的平均 FEV 相等。; <br> 因此，有足夠證據表明 baseline 的 FEV 顯著高於 2 年後的 FEV，支持孩子的肺功能隨著年齡增長而下降的說法。
+### **conclusion**
+由於 $p$-value 小於 0.05，拒絕\(H_0: \mu_{\text{d}} = 0\)  表示兩次測量的平均 FEV 相等。; <br> 因此，有足夠證據表明 baseline 的 FEV 顯著高於 2 年後的 FEV，支持孩子的肺功能隨著年齡增長而下降的說法。
 
 
-d.  (10 points) Children having FEV measurements greater than 3 are seen as having perfect pulmonary function. Perform a hypothesis test to assess if the proportion of having perfect pulmonary function is equal to 0.25.
+> d.  (10 points) Children having FEV measurements greater than 3 are seen as having perfect pulmonary function. Perform a hypothesis test to assess if the proportion of having perfect pulmonary function is equal to 0.25.
 
 定義 $p$ 為擁有完美肺功能的孩子比例（即 FEV 測量值大於 3 的孩子比例）
 
@@ -165,13 +165,13 @@ print(test_result)
 
 ```
 
-**conclusion：**  
+### **conclusion**
 由於擁有完美肺功能的比例為 0.3103976 ， \(p\)-value 為0.0004967 小於 0.05，拒絕\( H_0: P = 0.25 \) 。;<br>
 因此，有足夠證據表示擁有完美肺功能的孩子比例與 0.25 有顯著差異。
 
 
     
-e.  (10 points) Suppose that we are interested in knowing the relationship between gender and having perfect pulmonary functioning. What is the odds ratio of having perfect pulmonary function comparing boys to girls? Is this odds ratio significantly different from 1? Perform a hypothesis test and report your conclusion in words.
+> e.  (10 points) Suppose that we are interested in knowing the relationship between gender and having perfect pulmonary functioning. What is the odds ratio of having perfect pulmonary function comparing boys to girls? Is this odds ratio significantly different from 1? Perform a hypothesis test and report your conclusion in words.
 
 \(H_0\): \(odds ratio = 1\) 性別與是否擁有完美肺功能無關。 <br>
 \(H_1\): \(odds ratio \neq 1\) 性別與是否擁有完美肺功能有關。 <br>
@@ -203,7 +203,7 @@ fisher_result <- fisher.test(table_gender)
 # 顯示 Odds ratio 和檢定結果
 print(fisher_result)
 ```
-**conclusion：**  
+### **conclusion**
 本次分析結果得到的 odds ratio 為 1.821169 (odds ratio > 1)，表示男孩相較於女孩更容易擁有完美的肺功能 (FEV > 3)。<br>
 由於本次檢定得到的 p-value 小於 0.05，因此我們有足夠證據拒絕虛無假設\(H_0\): \(oddsratio = 1\)。<br>因此，有足夠證據顯示性別與是否擁有完美肺功能顯著相關，且男孩擁有完美肺功能的機率顯著高於女孩。
 
@@ -214,27 +214,112 @@ A case-control study of esophageal cancer was performed. Daily alcohol consumpti
 
 ![](hwk02_pic1.png)
 
-a.  (10 points) Assuming a constant odds ratio across age-strata, test to see if the odds ratio is 1. If not, estimate it. Interpret results.
+> a.  (10 points) Assuming a constant odds ratio across age-strata, test to see if the odds ratio is 1. If not, estimate it. Interpret results.
 
-b. (10 points) Was it reasonable to stratify by age? Why or why not? Answer specifically by considering whether age is a potential confounding factor and what might happen if one did not stratify.
+```{r}
+library(epitools)
+Alcohol_data <- array(c(
+  8, 5, 52, 164,   # 35–44
+  25, 21, 29, 138, # 45–54
+  50, 61, 27, 208  # 55–64
+), dim = c(2, 2, 3),
+dimnames = list(
+  Exposure = c("High", "Low"),
+  Status = c("Case", "Control"),
+  AgeGroup = c("35-44", "45-54", "55-64")
+))
+
+# 執行 Mantel-Haenszel 檢定
+mantelhaen.test(Alcohol_data)
+```
+### **result**
+
+\(H_0\) : common odds ratio = 1（暴露與疾病無關）
+\(H_1\) : common odds ratio ≠ 1（暴露與疾病有關）
+
+- common odds ratio ~ 5.937 <br>
+表示在控制年齡分層（35–44、45–54、55–64）之後，高飲酒者罹患食道癌的勝算約為低飲酒者的 5.94 倍。<br>
+- 95% 信賴區間：[3.96, 8.90] <br>
+在 95% 的信心水準下，真實的 common odds ratio 落在這個區間。因為區間完全高於 1，代表關聯是顯著正向的。 <br>
+- p-value < 2.2e-16：<br>
+p 值遠小於 0.05，表示有足夠證據拒絕虛無假設 \(H_0\):「高飲酒與罹患食道癌無關」，此假設不可能成立。<br>
+
+
+
+
+> b. (10 points) Was it reasonable to stratify by age? Why or why not? Answer specifically by considering whether age is a potential confounding factor and what might happen if one did not stratify.
+
+### **Answer**
+將資料依年齡分層是合理的<br>
+whether age is a potential confounding factor: yes ，年齡是飲酒習慣與食道癌風險的共同影響因素，是潛在的混淆因子。<br>
+what might happen if one did not stratify: 若不分層分析，可能導致飲酒與癌症關聯的估計產生偏誤（例如高估、低估甚至方向錯誤）。<br>
+分層分析可控制年齡的混淆效果，使 odds ratio 的估計更準確、結論更可信。
 
 # Problem 3
 
-(10 points) Suppose we are interested in comparing the effectiveness of 2 different antibiotics A and B in treating gonorrhea. We match each person receiving antibiotic A with an equivalent person (age within 5 years, same sex) to whom we give antibiotic B and we ask that these persons return to the clinic within 1 week to see if the gonorrhea has been eliminated. Suppose the results are as follows:
+> (10 points) Suppose we are interested in comparing the effectiveness of 2 different antibiotics A and B in treating gonorrhea. We match each person receiving antibiotic A with an equivalent person (age within 5 years, same sex) to whom we give antibiotic B and we ask that these persons return to the clinic within 1 week to see if the gonorrhea has been eliminated. Suppose the results are as follows:
+
+
 
 ![](hwk02_pic2.png) 
 
 Perform an analysis to compare the relative effectiveness of the two antibiotics. Interpret your results.
 
+### **result**
+$b$：A 成功、B 失敗 <br>
+$c$：A 失敗、B 成功 <br>
+
+McNemar’s Test 假設:
+
+$H_0$: 兩種抗生素效果相同 ($b=c$) <br>
+$H_1$: 兩種抗生數效果不同 ($b\neq a$) <br>
+
+```{r}
+antibiotics_data <- matrix(c(40, 20, 16, 3), nrow = 2,
+                      dimnames = list("A" = c("Success", "Failure"),
+                                      "B" = c("Success", "Failure")))
+
+# 執行 McNemar 檢定
+mcnemar.test(antibiotics_data)
+```
+
+
+由於$p$-value = 0.6171，大於常見的顯著水準 0.05，我們無法拒絕虛無假設$H_0$ <br>
+
+
 # Problem 4
 
-(10 points) Medical records were reviewed to assess the frequency of medical malpractice. Two reviewers classified the same records. We wish to study the agreement between the reviewers. Perform an analysis to assess agreement between the reviewers (+ means classified as malpractice).
+> (10 points) Medical records were reviewed to assess the frequency of medical malpractice. Two reviewers classified the same records. We wish to study the agreement between the reviewers. Perform an analysis to assess agreement between the reviewers (+ means classified as malpractice).
 
 ![](hwk02_pic3.png)
+<br>
+$H_0$ 兩位reviewers的一致性與隨機無異 ($k=0$) <br>
+$H_1$ 兩位reviewers有比隨機更高的一致性 ($k \neq 0$)
+
+
+```{r}
+library(psych)
+
+review_matrix <- matrix(c(35, 13, 21, 249),
+                        nrow = 2,
+                        byrow = TRUE,
+                        dimnames = list(
+                          "Reviewer A" = c("+", "-"),
+                          "Reviewer B" = c("+", "-")
+                        ))
+
+# 計算 Cohen's Kappa
+kappa_result <- cohen.kappa(review_matrix)
+print(kappa_result)
+```
+### **result**
+
+分析結果顯示 unweighted $κ = 0.61$（95% CI: 0.49–0.73），表示兩位reviewers之間具有強一致性（substantial agreement），遠高於隨機一致的水準。
+
 
 # Problem 5
 
-(10 points) Obstetric records of a group of children who died suddenly and unexpectedly, S.U.D., were compared with those of a group of live control children. Observations on the duration of the 2nd stage of labour were as follows:
+> (10 points) Obstetric records of a group of children who died suddenly and unexpectedly, S.U.D., were compared with those of a group of live control children. Observations on the duration of the 2nd stage of labour were as follows:
 
 | Group    | Time in minutes                             | 
 |:-------- |:------------------------------------------- |
@@ -246,3 +331,27 @@ Perform an analysis to compare the relative effectiveness of the two antibiotics
     
 Compare the median duration of labor in the two groups and test the significance of the difference using a nonparametric test.
 
+```{r}
+# S.U.D. 組
+sud <- c(60, 25, 6, 8, 4, 10, 25, 15, 10)  # <5 改 4
+
+# 控制組
+control <- c(13, 20, 15, 7, 75, 120, 10, 100, 9, 25, 30)  # 120* 改 120
+
+# 中位數比較
+cat("SUD 中位數:", median(sud), "\n")
+cat("Control 中位數:", median(control), "\n")
+
+# (Mann-Whitney U test)
+test_result <- wilcox.test(sud, control, exact = FALSE)
+print(test_result)
+
+```
+
+<br>
+$H_0$: S.U.D. 組與 Control 組的第二產程時間沒有顯著差異<br>
+$H_1$: S.U.D. 組與 Control 組的第二產程時間有顯著差異<br>
+
+### **conclusion**
+
+S.U.D. 組的中位數為 10 分鐘，對照組為 20 分鐘，雖然看起來有差距，但檢定得到的 $p$-value = 0.1822，大於 0.05 顯著水準，無法拒絕虛無假設，因此，並無足夠證據顯示第二產程時間在突然死亡嬰兒與存活嬰兒之間有顯著差異。
