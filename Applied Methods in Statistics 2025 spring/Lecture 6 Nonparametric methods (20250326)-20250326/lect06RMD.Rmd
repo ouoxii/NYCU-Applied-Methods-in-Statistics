@@ -1,0 +1,166 @@
+---
+title: "Lecture 6: Nonparametric methods"
+output: html_document
+date: "2025/3/26"
+---
+
+# RMD_example 06.1: Read the Gene expression microarray data (samplexprs.csv) 
+```{r}
+# Import the csv file into R
+#   note: stringsAsFactors=TRUE will screw up conversion to numeric!
+samplexprs <- read.csv("samplexprs.csv", header=TRUE, stringsAsFactors=FALSE)
+
+dim(samplexprs)
+head(samplexprs[,1:10])
+
+J00129<-samplexprs[,"J00129"]
+metastases<-samplexprs[,"metastases"]
+ERp<-samplexprs[,"ERp"]
+Contig29982_RC<-samplexprs[,"Contig29982_RC"]
+```
+
+# One sample test
+
+## RMD_example 06.2: One-sample t-test
+
+```{r}
+# Ointment data
+Oint<-c(37,39,31,39,38,47,35,30,25,40)
+
+# Summary statistics for Oint
+#   Install package "psych" first, then load it into R
+library(psych)
+describe(Oint)
+
+# One-sample t-test
+t.test(Oint, mu=34, alternative="greater") 
+```
+
+## RMD_example 06.3: Sign test
+
+```{r}
+# Install the package "BSDA" first, then load it into R
+library(BSDA)
+
+SIGN.test(Oint, md=34, alternative="greater") 
+```
+
+## RMD_example 06.4: Sign test—for gene expression data 
+
+```{r}
+# Install the package "BSDA" first, then load it into R
+library(BSDA)
+SIGN.test(J00129, md=-0.5) # Ho: mu=-0.5
+```
+
+# Paired data
+
+## RMD_example 06.5: Paired t-test
+
+```{r}
+# Twin paired data
+twin1<-c(659,984,397,574,447,479,676,761,647,402)
+twin2<-c(452,507,460,787,351,277,234,516,577,338)
+
+# summary statistics for twin1 and twin2
+describe(twin1)
+describe(twin2)
+describe(twin1-twin2)
+
+# paired t-test for comparing twin1 vs twin2
+t.test(twin1, twin2, paired=T, alternative="greater")
+```
+
+## RMD_example 06.6: Sign test for the difference twin1-twin2
+
+```{r}
+D<-twin1-twin2
+SIGN.test(D, md=0, alternative="greater") # Ho: D_mu=0
+```
+
+## RMD_example 06.7: Wilcoxon signed-rank test
+
+```{r}
+# install the package "MASS" first, then load it into R
+library(MASS)
+
+# exact test
+wilcox.test(twin1, twin2, paired=T, exact=T, alternative="greater")
+
+# Normal approximation
+wilcox.test(twin1, twin2, paired=T, exact=F, correct=F, alternative="greater")
+```
+
+## RMD_example 06.8: Wilcoxon signed-rank test—for gene expression data 
+
+```{r}
+wilcox.test(J00129, Contig29982_RC, paired=T)
+```
+
+# Two sample test 
+
+## RMD_example 06.9: Two-sample t-test
+
+```{r}
+aspX<-c(15,26,13,28,17)
+aspY<-c(12,20,10,21,18,22)
+
+# summary statistics for aspX, aspY
+describe(aspX)
+describe(aspY)
+
+# two-sample t-test for aspX vs. aspY
+t.test(aspX, aspY, var.equal=T, alternative="greater")
+t.test(aspX, aspY, var.equal=F, alternative="greater")
+var.test(aspX, aspY)
+```
+
+## RMD_example 06.10: Wilcoxon rank-sum (Mann-Whitney) test
+
+```{r}
+# exact test
+wilcox.test(aspX, aspY, paired=F, exact=T, alternative="greater")
+
+# Normal approximation
+wilcox.test(aspX, aspY, paired=F, exact=F, correct=F, alternative="greater")
+```
+
+## RMD_example 06.11: Wilcoxon rank-sum (Mann-Whitney) test—for gene expression data 
+
+```{r}
+wilcox.test(J00129~metastases)
+```
+
+# More than 2 samples
+
+## RMD_example 06.12: ANOVA—for gene expression data 
+
+```{r}
+# summary statistics of J00129 (log10 gene expression intensity ratios) by ERp
+describeBy(J00129, ERp)
+
+# more than two samples test for J00129 over ER
+anova(lm(J00129~as.factor(ERp)))
+```
+
+## RMD_example 06.13: Kruskal-Wallis test—for gene expression data 
+
+```{r}
+kruskal.test(J00129~as.factor(ERp))
+```
+
+# Correlation
+
+## RMD_example 06.14: Pearson correlation—for gene expression data
+
+```{r}
+# correlation between two continuous gene expressions J00129 and Contig29982_RC
+cor.test(J00129, Contig29982_RC, method="pearson")
+```
+
+## RMD_example 06.15: Spearman rank correlation—for gene expression data
+
+```{r}
+# correlation between continuous gene expression J00129 and ordinal expression level ERp
+cor.test(J00129, ERp, method="spearman")
+```

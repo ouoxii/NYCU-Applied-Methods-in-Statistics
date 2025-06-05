@@ -1,0 +1,132 @@
+---
+title: "Lecture 5: Measures of association and hypothesis testing for categorical data"
+output: html_document
+date: "2025/3/19"
+---
+
+# RMD_example 5.1: Read the Gene expression microarray data (samplexprs.csv) 
+
+```{r}
+# Import the csv file into R
+#   note: stringsAsFactors=TRUE will screw up conversion to numeric!
+samplexprs <- read.csv("samplexprs.csv", header=TRUE, stringsAsFactors=FALSE)
+
+dim(samplexprs)
+head(samplexprs[,1:10])
+
+J00129<-samplexprs[,"J00129"]
+metastases<-samplexprs[,"metastases"]
+ERp<-samplexprs[,"ERp"]
+Contig29982_RC<-samplexprs[,"Contig29982_RC"]
+```
+
+# RMD_example 5.2: Binomial test
+
+```{r}
+# generating frequency tables
+#   install package "gmodels", "epiR" first, then load them into R
+library(gmodels)
+library(epiR)
+
+#   create ERs=1 if ERp>10, 0 o.w.
+ERs<-rep(0, length(ERp))
+ERs[!is.na(ERp) & ERp>10]<-1
+ERs[is.na(ERp)]<-NA
+
+# test for a single proportion
+TAB<-xtabs(~ERs)
+TAB
+#   notice: p=Pr(ERs=0)
+chisq.test(TAB) # Ho: p=0.5
+chisq.test(TAB, p=c(0.4, 0.6)) # Ho: p=0.4
+binom.test(TAB, p=0.5) # Ho: p=0.5
+binom.test(TAB, p=0.4) # Ho: p=0.4
+```
+
+# RMD_example 5.3: Cohort and case-control studies
+
+For exploring the data, we first create the $2 \times 2$ table.
+
+```{r}
+TAB1<-xtabs(~ERs+metastases)
+TAB1
+```
+
+If the data are from a chort study, we can have relative risk and odds ratio. In the function `epi.2by2`, notice that "Exposed +" is for "ERs=0" and "Exposed -" is for "ERs=1", and "Outcome +" is for "metastases=0" and "Outcome -" is for "metastases=1"
+
+```{r}
+epi.2by2(TAB1, method="cohort.count")
+```
+
+If the data are from a case-control study, we can have the odds ratio.
+
+```{r}
+epi.2by2(TAB1, method="case.control")
+```
+
+# RMD_example 5.4: $\chi^{2}$ / Fisher's exact test
+
+```{r}
+# chi2 / Fisher's exact test
+CrossTable(ERs, metastases, prop.chisq=F, chisq=T, fisher=T)
+```
+
+# RMD_example 5.5: McNemar's test for matched-pair studies
+
+```{r}
+# poor prognosis matches good prognosis 
+Gg<-c(1,0,1,1,1,1,1,0,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,1,0)
+Pg<-c(0,1,0,1,1,1,0,0,0,0,1,1,0,1,1,1,1,1,1,1,1,1,1,0,0)
+TAB2<-xtabs(~Gg+Pg)
+TAB2
+
+# McNemar's test for ERs on prognosis
+mcnemar.test(TAB2)
+```
+
+# RMD_example 5.6: Measure of agreement and its test
+
+```{r}
+# measure of agreement
+#    on expression of J00129 and Contig29982_RC
+Jexpry<-rep(0, length(J00129))
+Jexpry[!is.na(J00129) & (J00129 > -0.5)]<-1
+Jexpry[is.na(J00129)]<-NA
+Cexpry<-rep(0, length(Contig29982_RC))
+Cexpry[!is.na(Contig29982_RC) & (Contig29982_RC > -0.5)]<-1
+Cexpry[is.na(Contig29982_RC)]<-NA
+TAB3<-xtabs(~Jexpry+Cexpry)
+TAB3
+
+# kappa coefficient/test
+#   install the package "fmsb" first, then load it into R
+library(fmsb)
+Kappa.test(TAB3)
+```
+
+# RMD_example 5.7: Interaction
+
+```{r}
+# create age45=1 if age>45, 0 o.w.
+age<-samplexprs[,"age"]
+age45<-rep(0, length(age))
+age45[!is.na(age) & age>45]<-1
+age45[is.na(age)]<-NA
+
+TAB4<-xtabs(~ERs+metastases+age45)
+TAB4
+```
+
+# RMD_example 5.8: Mantel-Haenszel test
+
+```{r}
+# smoking versus lung cancer for different genders
+TAB5<-array(c(36,131,4,29,
+              140,27,60,23),
+            dim=c(2,2,2))
+dimnames(TAB5)<-list(c("Non-smokers","Smokers"), c("Lung cancer no","Lung cancer yes"), c("Males","Females"))
+TAB5
+epi.2by2(TAB5, method="cohort.count")
+mantelhaen.test(TAB5)
+```
+

@@ -1,0 +1,226 @@
+---
+title: 'Lecture 8: Linear regression analysis'
+output: html_document
+date: "2025/4/9"
+---
+
+# Linear regression
+
+## RMD_example 08.1: Read 六都房地產實價登錄資料 (house.csv) 
+
+```{r}
+# Import the csv file into R
+#   note: stringsAsFactors=TRUE will screw up conversion to numeric!
+house <- read.csv("house.csv", header=TRUE, fileEncoding="BIG5")
+
+dim(house)
+head(house)
+```
+
+## RMD_example 08.2: Simple linear regression
+
+Let's first examine the histogram of y (每平方公尺單價)
+
+```{r}
+# Histogram of 每平方公尺單價 with a smooth density estimate
+hist(house$每平方公尺單價,
+     main="Histogram for 每平方公尺單價",
+     xlab="每平方公尺單價",
+     ylab="",
+     border="blue", 
+     col="green",
+     xlim=c(0, 300000),
+     las=1,
+     breaks=100,
+     prob = TRUE)
+lines(density(house$每平方公尺單價))
+```
+
+Apparently, the data is right skewed. A log transformation on y can make it symmetric (like normal).
+
+```{r}
+# Histogram of log(每平方公尺單價) with a smooth density estimate
+hist(log(house$每平方公尺單價),
+     main="Histogram for log(每平方公尺單價)",
+     xlab="log(每平方公尺單價)",
+     ylab="",
+     border="blue", 
+     col="green",
+     xlim=c(7, 14),
+     las=1,
+     breaks=50,
+     prob = TRUE)
+lines(density(log(house$每平方公尺單價)))
+```
+
+We then perform the simple linear regression on y.
+
+```{r}
+# Summary statistics of 每平方公尺單價 and 屋齡
+#   Install package "psych" first, then load it into R
+library(psych)
+每平方公尺單價 <- house[,"每平方公尺單價"]
+屋齡 <- house[,"屋齡"]
+describe(每平方公尺單價)
+describe(屋齡)
+cor.test(每平方公尺單價, 屋齡)
+
+# Simple linear regression analysis of 每平方公尺單價 on 屋齡
+lmJE <- lm(每平方公尺單價~屋齡)
+summary(lmJE)
+#   plots for regression diagnosis
+par(mfrow=c(2,2))
+plot(lmJE, main="每平方公尺單價 vs. 屋齡")
+
+# Summary statistics of 每平方公尺單價 by 車位
+車位 <- house[,"車位"]
+車位[車位=="無"]<-0
+車位[車位=="有"]<-1
+車位 <- as.numeric(車位)
+describeBy(每平方公尺單價, 車位)
+
+# Simple linear regression analysis of 每平方公尺單價 on 車位
+lmJm <- lm(每平方公尺單價~車位)
+summary(lmJm)
+#   plots for regression diagnosis
+par(mfrow=c(2,2))
+plot(lmJm, main="每平方公尺單價 vs. 車位")
+```
+
+Perform these simple linear regressions on log(y).
+
+```{r}
+# Simple linear regression analysis of log(每平方公尺單價) on 屋齡
+lmlJE <- lm(log(每平方公尺單價)~屋齡)
+summary(lmlJE)
+#   plots for regression diagnosis
+par(mfrow=c(2,2))
+plot(lmlJE, main="log(每平方公尺單價) vs. 屋齡")
+
+# Simple linear regression analysis of log(每平方公尺單價) on 車位
+lmlJm <- lm(log(每平方公尺單價)~車位)
+summary(lmlJm)
+#   plots for regression diagnosis
+par(mfrow=c(2,2))
+plot(lmlJm, main="log(每平方公尺單價) vs. 車位")
+```
+
+## RMD_example 08.3: Multiple linear regression
+
+```{r}
+# Multiple linear regression analysis of 每平方公尺單價 on 車位 and 屋齡
+lmJma<-lm(每平方公尺單價~車位+屋齡)
+summary(lmJma)
+#   plots for regression diagnosis
+par(mfrow=c(2,2))
+plot(lmJma, main="每平方公尺單價 vs. 車位+屋齡")
+```
+
+## RMD_example 08.4: Polynomial regression
+
+```{r}
+# Linear regression analysis of 每平方公尺單價 on 屋齡 and 屋齡^2
+屋齡2<-屋齡*屋齡
+lmJEE2<-lm(每平方公尺單價~屋齡+屋齡2)
+summary(lmJEE2)
+#   plots for regression diagnosis
+par(mfrow=c(2,2))
+plot(lmJEE2, main="每平方公尺單價 vs. 屋齡+屋齡2")
+```
+
+## RMD_example 08.5: Dummy variables
+
+```{r}
+# Linear regression analysis of 每平方公尺單價 on dummy variables of 區域
+區域<-house[,"區域"]
+X北<-區域
+X北[!is.na(區域) & 區域=="台北市"]<-1
+X北[!is.na(區域) & 區域!="台北市"]<-0
+X北<-as.numeric(X北)
+X新<-區域
+X新[!is.na(區域) & 區域=="新北市"]<-1
+X新[!is.na(區域) & 區域!="新北市"]<-0
+X新<-as.numeric(X新)
+X桃<-區域
+X桃[!is.na(區域) & 區域=="桃園市"]<-1
+X桃[!is.na(區域) & 區域!="桃園市"]<-0
+X桃<-as.numeric(X桃)
+X中<-區域
+X中[!is.na(區域) & 區域=="台中市"]<-1
+X中[!is.na(區域) & 區域!="台中市"]<-0
+X中<-as.numeric(X中)
+X南<-區域
+X南[!is.na(區域) & 區域=="台南市"]<-1
+X南[!is.na(區域) & 區域!="台南市"]<-0
+X南<-as.numeric(X南)
+
+lmJEd<-lm(每平方公尺單價~X北+X新+X桃+X中+X南)
+summary(lmJEd)
+#   plots for regression diagnosis
+par(mfrow=c(2,2))
+plot(lmJEd, main="每平方公尺單價 vs. dummy of 區域")
+```
+
+## RMD_example 08.6: Interaction in regression
+
+```{r}
+# Linear regression analysis for interactions
+屋齡分組<-rep(0, length(屋齡))
+屋齡分組[!is.na(屋齡) & 屋齡>25]<-1
+屋齡分組[is.na(屋齡)]<-NA
+車位X屋齡分組<-車位*屋齡分組
+
+lmJmagmXag<-lm(每平方公尺單價~車位+屋齡分組+車位X屋齡分組)
+summary(lmJmagmXag)
+#   plots for regression diagnosis
+par(mfrow=c(2,2))
+plot(lmJmagmXag, main="interactions")
+```
+
+## RMD_example 08.7: Confounding in regression
+
+```{r}
+# Linear regression analysis of 每平方公尺單價 on 車位
+lmJm <- lm(每平方公尺單價~車位)
+summary(lmJm)
+
+# Linear regression analysis of 每平方公尺單價 on 車位 and 屋齡分組
+lmJmag<-lm(每平方公尺單價~車位+屋齡分組)
+summary(lmJmag)
+#   plots for regression diagnosis
+par(mfrow=c(2,2))
+plot(lmJmag, main="每平方公尺單價 vs. 車位+屋齡分組")
+```
+
+## RMD_example 08.8: Variable selection
+
+```{r}
+# All possible regressions
+library(leaps)
+車位X屋齡<-車位*屋齡
+d<-cbind(每平方公尺單價, 車位, 屋齡, 屋齡2, 車位X屋齡)
+for(i in 1:dim(d)[2]) d <- d[!is.na(d[,i]),]   # delete the NA's (missing values)
+resall<-regsubsets(x=d[,(2:dim(d)[2])], y=d[,1],
+                   nbest=1,         # 1 best model for each number of predictors
+                   nvmax=NULL,      # NULL for no limit on number of variables
+                   force.in=NULL, force.out=NULL,
+                   method="exhaustive")
+summary(resall)
+#   plot results
+library(car)
+par(mfrow=c(1,2))
+subsets(resall, statistic="adjr2", main="All: adjusted R^2", legend=c(1.5, 0.02))   # for adjusted R^2
+subsets(resall, statistic="bic", main="All: BIC", legend=c(1.5, -100))              # for BIC
+
+# Backward elimination
+base<-lm(每平方公尺單價~1, data=data.frame(d))
+full<-lm(每平方公尺單價~車位+屋齡+屋齡2+車位X屋齡, data=data.frame(d))
+step(full, direction="backward", test="F")
+
+# Forward selection
+step(base, scope=list(lower=base, upper=full), direction="forward", test="F")
+
+# Stepwise regression
+step(base, scope=list(upper=full), direction="both", test="F")
+```
+

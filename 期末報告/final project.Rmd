@@ -1,0 +1,255 @@
+---
+title: "Sleep Health and Lifestyle Dataset"
+author: "陳俞君"
+output: html_document
+date: "2025-06-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(ggpubr)
+library(patchwork)
+library(broom)
+library(MASS)
+library(logistf)
+
+df <- read.csv("Sleep_health_and_lifestyle_dataset.csv")
+
+# 統一 BMI 類別名稱
+df$BMI.Category[df$BMI.Category == "Normal Weight"] <- "Normal"
+df$BMI.Category <- factor(df$BMI.Category)
+
+# 轉換 Sleep Disorder 為二元變數
+df$Sleep.Disorder <- ifelse(df$Sleep.Disorder == "None", 0, 1)
+df$Sleep.Disorder <- factor(df$Sleep.Disorder)
+
+# 建立年齡分組
+df$AgeGroup <- cut(df$Age, breaks = c(0, 30, 45, 60, Inf), labels = c("≤30", "31-45", "46-60", "60+"))
+
+
+```
+
+
+```{r}
+summary(df[c("Sleep.Duration", "Quality.of.Sleep", "Age", "Daily.Steps", "Stress.Level")])
+
+```
+
+
+```{r}
+table(df$BMI.Category)
+table(df$Gender)
+table(df$Sleep.Disorder)
+
+```
+
+```{r}
+ggplot(df, aes(x = Age, y = Sleep.Duration)) + 
+geom_point(alpha = 0.5) + geom_smooth(method = "loess") + labs(title = "Age vs Sleep Duration")
+
+
+```
+
+```{r}
+ggplot(df, aes(x = Sleep.Disorder, y = Quality.of.Sleep)) +
+  geom_boxplot() +
+  labs(title = "Sleep Disorder vs Quality of Sleep")
+
+```
+
+```{r}
+cor(df$Quality.of.Sleep, df$Physical.Activity.Level, method = "spearman")
+cor(df$Quality.of.Sleep, df$Daily.Steps)
+
+```
+
+```{r}
+# gender vs sleep duration
+custom_colors <- c("Female" = "#e19d92", "Male" = "#a5c2cd")
+ggplot(df, aes(x = Gender, y = Sleep.Duration, fill = Gender)) +
+  geom_boxplot() +
+  scale_fill_manual(values = custom_colors) +
+  labs(title = "Sleep Duration by Gender", x = "Gender", y = "Sleep Duration (hours)") +
+  theme_minimal()
+
+# gender vs quality of sleep
+ggplot(df, aes(x = Gender, y = Quality.of.Sleep, fill = Gender)) +
+  geom_boxplot() +
+  scale_fill_manual(values = custom_colors) +
+  labs(title = "Quality of Sleep by Gender", x = "Gender", y = "Sleep Quality (Score)") +
+  theme_minimal()
+
+```
+
+
+
+
+
+### 問題 1：男性與女性的睡眠時數是否有差異？
+
+```{r}
+t.test(`Sleep.Duration` ~ Gender, data = df)
+```
+
+### 問題2：男性與女性的睡眠品質是否有差異？
+
+```{r}
+t.test(`Quality.of.Sleep` ~ Gender, data = df)
+```
+
+
+### 問題3：不同年齡組別的睡眠時數是否有差異？
+
+```{r}
+df$AgeGroup <- cut(df$Age, breaks = c(0, 30, 45, 60, Inf), labels = c("<=30", "31-45", "46-60", "60+"))
+anova1 <- aov(`Sleep.Duration` ~ AgeGroup, data = df)
+summary(anova1)
+
+```
+```{r}
+TukeyHSD(anova1)
+
+```
+
+### 問題4：不同年齡組別的睡眠品質是否有差異？
+
+```{r}
+df$AgeGroup <- cut(df$Age, breaks = c(0, 30, 45, 60, Inf), labels = c("<=30", "31-45", "46-60", "60+"))
+anova2 <- aov(`Quality.of.Sleep` ~ AgeGroup, data = df)
+summary(anova2)
+
+```
+
+```{r}
+TukeyHSD(anova2)
+```
+
+
+### 問題5：不同 BMI 分類的人，其睡眠時數是否有差異？
+```{r}
+anova3 <- aov(`Sleep.Duration` ~ `BMI.Category`, data = df)
+summary(anova3)
+
+```
+
+```{r}
+TukeyHSD(anova3)
+```
+
+
+### 問題6：日常步數與睡眠品質之間是否有關聯？
+
+```{r}
+cor.test(df$`Daily.Steps`, df$`Quality.of.Sleep`, method = "pearson")
+
+```
+
+### 問題 7：每日身體活動時間與睡眠品質間是否有關聯？
+
+```{r}
+
+cor.test(df$`Physical.Activity.Level`, df$`Quality.of.Sleep`, method = "spearman")
+
+```
+
+
+
+### 問題 8：不同因素是否會影響睡眠時數？（Linear regression）
+```{r}
+lm1 <- lm(`Sleep.Duration` ~ Age + Gender + `BMI.Category` + `Daily.Steps` + `Stress.Level`, data = df)
+summary(lm1)
+
+```
+
+```{r}
+# 使用 broom 轉換為表格資料
+library(broom)
+library(ggplot2)
+
+coef_df <- tidy(lm1, conf.int = TRUE)  # 產生估計值與信賴區間
+
+# 過濾掉 Intercept（截距）以便專注於變數效果
+coef_df <- subset(coef_df, term != "(Intercept)")
+
+# 繪圖：條形圖顯示係數與信賴區間
+ggplot(coef_df, aes(x = reorder(term, estimate), y = estimate)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2, color = "black") +
+  coord_flip() +
+  labs(title = "Regression Coefficients (Sleep Duration)",
+       x = "Variable", y = "Estimate") +
+  theme_minimal()
+```
+
+
+```{r}
+# 基本殘差圖
+plot(lm1$fitted.values, rstandard(lm1),
+     xlab = "Fitted Values",
+     ylab = "Standardized Residuals",
+     main = "Residuals vs Fitted")
+abline(h = 0, col = "red", lty = 2)
+
+```
+```{r}
+# QQ plot：標準化殘差與理論常態分佈比較
+qqnorm(rstandard(lm1),
+       main = "Normal Q-Q Plot of Residuals")
+qqline(rstandard(lm1), col = "red", lwd = 2)
+
+```
+
+
+### 問題 9：哪些變數能有效解釋睡眠時數？（steps regression）
+
+
+```{r}
+library(MASS)
+dplyr::select(df, Age, Gender)
+
+step_model <- stepAIC(lm1, direction = "both", trace = FALSE)
+summary(step_model)
+```
+
+```{r}
+# 看模型中包含的變數
+formula(step_model)
+
+```
+
+
+### 問題10：哪些因素會影響是否有睡眠障礙？（Logistic regression）
+
+
+```{r}
+
+# 將 "None" 設為 0，其它任一障礙設為 1
+df$Sleep.Disorder <- ifelse(df$Sleep.Disorder == "None", 0, 1)
+df$Sleep.Disorder <- as.factor(df$Sleep.Disorder)
+
+logit_model <- glm(`Sleep.Disorder` ~ Age + Gender + `BMI.Category` + `Stress.Level` + `Quality.of.Sleep` + `Daily.Steps`, 
+                   data = df, family = "binomial")
+summary(logit_model)
+exp(cbind(OR = coef(logit_model), confint.default(logit_model)))
+
+```
+
+```{r}
+# install.packages("logistf") 
+library(logistf)
+
+firth_model <- logistf(Sleep.Disorder ~ Age + Gender + BMI.Category + Stress.Level + Quality.of.Sleep + Daily.Steps, 
+                       data = df)
+summary(firth_model)
+exp(cbind(OR = firth_model$coefficients, confint(firth_model)))
+
+```
+

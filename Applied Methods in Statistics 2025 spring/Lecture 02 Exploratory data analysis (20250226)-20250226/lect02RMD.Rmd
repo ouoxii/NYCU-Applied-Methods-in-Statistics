@@ -1,0 +1,394 @@
+---
+title: 'Lecture 2: Exploratory data analysis'
+output: html_document
+date: "2025/2/26"
+---
+
+## RMD_example 2.1: Read the Gene expression microarray data (samplexprs.csv) 
+
+```{r}
+# Import the csv file into R
+#   note: stringsAsFactors=TRUE will screw up conversion to numeric!
+samplexprs <- read.csv("samplexprs.csv", header=TRUE, stringsAsFactors=FALSE)
+
+dim(samplexprs)
+head(samplexprs[,1:10])
+```
+
+## RMD_example 2.2: Stem-and-leaf plot
+
+```{r}
+stem(samplexprs$age)
+stem(samplexprs$J0012)
+```
+
+## RMD_example 2.3: q-q plot
+
+For q-q plot, we can first compute the percentiles for our list of data (ages/J0012) and for the normal distribution, and then compare them.
+
+```{r}
+# install.packages("rafalib") # do this if you have not done this before
+library(rafalib)
+
+# plot for age
+x <- samplexprs$age
+ps <- ( seq(0,99) + 0.5 )/100
+qs <- quantile(x, ps)
+normalqs <- qnorm(ps, mean(x), popsd(x))
+plot(normalqs,qs,xlab="Normal percentiles",ylab="Age percentiles")
+abline(0,1, col="red") ##identity line
+
+# plot for J0012
+y <- samplexprs$J0012
+ps <- ( seq(0,99) + 0.5 )/100
+qs <- quantile(y, ps)
+normalqs <- qnorm(ps, mean(y), popsd(y))
+plot(normalqs,qs,xlab="Normal percentiles",ylab="J0012 percentiles")
+abline(0,1, col="red") ##identity line
+```
+
+We can also see the plot with the existing function `qqnorm`.
+
+```{r}
+qqnorm(x); qqline(x, col="red")
+qqnorm(y); qqline(y, col="red")
+```
+
+Notice that the `qqnorm` function plots against a **standard normal** distribution. This is why the line has slope `popsd(x)` (or `popsd(y)`) and intercept `mean(x)` (or `mean(y)`). 
+
+In fact, we can run Monte Carlo simulations to see plots like this for data known to be normally distributed.
+
+```{r}
+n <-1000
+x <- rnorm(n)
+qqnorm(x)
+qqline(x, col="red")
+```
+
+We can also get a sense for how non-normally distributed data will look in a qq-plot. Here we generate data from the t-distribution with different degrees of freedom. Notice that the smaller the degrees of freedom, the fatter the tails. We call these "fat tails" because if we plotted an empirical density or histogram, the density at the extremes would be higher than the theoretical curve. In the qq-plot, this can be seen in that the curve is lower than the identity line on the left side and higher on the right side. This means that there are more extreme values than predicted by the theoretical density plotted on the x-axis.
+
+```{r}
+dfs <- c(3,6,12,30)
+mypar(2,2)
+for(df in dfs){
+  x <- rt(1000,df)
+  qqnorm(x,ylab="t quantiles",main=paste0("d.f.=",df),ylim=c(-6,6))
+  qqline(x, col="red")
+}
+```
+
+## RMD_example 2.4: Histogram
+
+### RMD_example 2.5: Learning ggplot2
+
+Here we will construct the ggplot2 plot piece by piece.
+
+```{r}
+# Install package "tidyverse" first, then load it into R
+library(tidyverse)
+```
+
+#### Creating a blank `ggplot` object
+
+The first step in creating a `ggplot2` graph is to define a `ggplot` object. We do this with the function `ggplot` which initializes the graph. If we read the help file for this function we see that the first arguments is used to specify what data is associated with this object: 
+
+```{r, eval=FALSE}
+ggplot(data=samplexprs)
+```
+
+We can also pipe the data. So this line of code is equivalent to the one above:
+
+```{r, eval=FALSE}
+samplexprs %>% ggplot()
+```
+
+Note that this creates a blank slate since no geometry has been defined. 
+
+#### Layers 
+
+In ggplot we create graphs by adding _layers_. Layers can define geometries, compute summary statistics, define what scales to use, or even change styles.
+To add layers, we use the the symbol `+`. In general a line of code will look like this:
+
+> DATA %>% `ggplot()` + LAYER 1 + LAYER 2 + ... + LAYER N
+
+Usually, the first added layer defines the geometry.
+
+##### Geometry
+
+We want to make a histogram. Taking a quick look at the cheat sheet we see that the function used to create plots with this geometry is `geom_histogram`. 
+
+We will see that geometry function names follow this pattern: `geom` and the name of the geometry connected by an underscore. 
+
+For `geom_histogram` to know what to do, we need to provide data and a aesthetic mapping. 
+ 
+##### aes()
+ 
+`aes()` will be one of the functions that you will most use. The function connects data with what we see on the graph. We refer to this connect as the __aesthetic mappings__. The outcome of this function is often used as the argument of a geometry function. This example produces a histogram of gene J00129's expression intensity ratios :
+
+```{r}
+samplexprs %>% ggplot() + 
+               geom_histogram(aes(x=J00129, y=after_stat(density)))
+```
+
+Note we set `y=after_stat(density)` for creating a histogram with density in the y-axis. 
+
+Keep in mind that the behavior of recognizing the variables from the data component, is quite specific to `aes`. With most function, if you try to access the values of `J00129` outside of `aes` you receive an error. 
+
+##### Adding other layers
+
+A second layer in the plot we wish to add a smoothed density plot.
+The `geom_density` permits us to do so.
+
+```{r}
+samplexprs %>% ggplot() + 
+               geom_histogram(aes(x=J00129, y=after_stat(density))) + 
+               geom_density(aes(x=J00129))
+```
+
+##### Tinkering with other arguments
+ 
+Note that each geometry function has many arguments other than `aes` and `data`. They tend to be specific to the function. For example, in the histogram we wish to make the bin size = 0.1 or 0.05 and the color of the smoothed density blue, we can add other arguments
+
+```{r}
+samplexprs %>% ggplot() + 
+               geom_histogram(aes(x=J00129, y=after_stat(density)), binwidth=0.1) +
+               geom_density(aes(x=J00129), col="#00BFC4")
+
+samplexprs %>% ggplot() + 
+               geom_histogram(aes(x=J00129, y=after_stat(density)), binwidth=0.05) +
+               geom_density(aes(x=J00129), col="#00BFC4")
+```
+
+Note that `binwidth` and `col` are __not__ a mapping, they affect all the points so we do not need to include it inside `aes`.
+
+#### Global aesthetic mappings
+
+Note that in the previous line of code, we define the mapping `aes(x=J00129)` twice, once in each geometry. We can avoid this by using a _glogbal_ aesthetic mapping. We can do this when we define the `ggplot` object. 
+If we define a mapping in `ggplot`, then all the geometries that are added as layers will default to this mapping. 
+
+```{r}
+samplexprs %>% ggplot(aes(x=J00129)) + 
+               geom_histogram(aes(y=after_stat(density)), binwidth=0.05) +
+               geom_density(col="#00BFC4")
+```
+
+##### Local aesthetic mappings overide global ones
+
+If we need to, we can override the global mapping by defining a new mapping within each layer. These _local_ definitions overrides the _global_. 
+
+#### Labels and titles
+
+The cheat sheet quickly reveals that to change labels and add a title we use the following functions:
+
+```{r}
+samplexprs %>% ggplot(aes(x=J00129)) + 
+               geom_histogram(aes(y=after_stat(density)), binwidth=0.05) +
+               geom_density(col="#00BFC4") +
+               xlab("J00129 gene expression intensity ratios") + 
+               ggtitle("Histogram of J00129 gene expression")
+```
+
+## RMD_example 2.5: Boxplot (=1)
+
+```{r}
+b <- ggplot(samplexprs, aes(x=factor(1), y=J00129))
+b + geom_boxplot() + labs(x="")
+b + geom_boxplot() + labs(x="") + coord_flip()
+b + geom_boxplot(fill="grey80", colour="#3366FF") + labs(x="") + coord_flip()
+```
+
+## RMD_example 2.6: Bar chart
+
+```{r}
+ba <- ggplot(samplexprs, aes(x=factor(ERp)))
+ba + geom_bar()
+ba + geom_bar(fill="white", colour="darkgreen")
+
+qplot(factor(ERp), data=samplexprs, geom="bar", fill=factor(ERp))
+```
+
+## RMD_example 2.7: Pie chart
+
+```{r}
+p <- ggplot(samplexprs, aes(x=factor(1), fill=factor(ERp)))
+p + geom_bar(width=1, position="fill") + coord_polar(theta="y")
+```
+
+## RMD_example 2.8: Scatterplot
+
+```{r}
+s <- ggplot(samplexprs, aes(J00129, Contig29982_RC))
+s + geom_point()
+# Add trend line
+s + geom_point() + stat_smooth()
+```
+
+## RMD_example 2.9: Read exprs_sig.csv 
+
+```{r}
+# Import the csv file into R
+#   note: stringsAsFactors=TRUE will screw up conversion to numeric!
+exprs_sig <- read.csv("exprs_sig.csv", header=TRUE, stringsAsFactors=FALSE)
+#   note: read.csv treats the 1st column of exprs_sig.csv as the data, not the rownames,
+#         we have to correct this
+#         get the 1st column as the rownames
+names1 <- exprs_sig[,1]
+#         remove the 1st column from exprs_sig
+exprs_sig <- exprs_sig[,-1]
+#         assign the rownames
+rownames(exprs_sig) <- names1
+colnames(exprs_sig)
+
+dim(exprs_sig)
+head(exprs_sig[,1:10])
+```
+
+## RMD_example 2.10: Scatterplot for big data
+
+```{r}
+sh <- ggplot(exprs_sig, aes(AA01, SF58))
+sh + geom_point()
+
+# Varying alpha is useful for large datasets
+sh + geom_point(alpha = 0.3)
+# Add trend line
+sh + geom_point(alpha = 0.3) + stat_smooth()
+# Or adding heatmap of 2d bin
+sh + geom_bin2d()
+```
+
+## RMD_example 2.11: Boxplot (>1)
+
+```{r}
+# With qplot
+qplot(x=factor(metastases), y=J00129, data=samplexprs, geom="boxplot")
+qplot(x=factor(ERp), y=J00129, data=samplexprs, geom="boxplot")
+# With ggplot
+b2 <- ggplot(samplexprs, aes(x=factor(metastases), y=J00129))
+b2 + geom_boxplot()
+b2 <- ggplot(samplexprs, aes(x=factor(ERp), y=J00129))
+b2 + geom_boxplot()
+```
+
+## RMD_example 2.12: Stacked bar chart
+
+```{r}
+sba <- ggplot(samplexprs, aes(x=factor(ERp), fill=factor(metastases)))
+# y is count
+sba + geom_bar()
+sba + geom_bar() + coord_flip()
+# y is proportion
+sba + geom_bar(position="fill") + labs(y="proportion")
+```
+
+## RMD_example 2.13: Faceting bar charts
+
+```{r}
+fba <- ggplot(samplexprs, aes(x=factor(ERp)))
+fba + geom_bar() + facet_wrap(~metastases)
+```
+
+## RMD_example 2.14: Stacked area chart
+
+```{r}
+# For ERp+metastases
+#   Create 2x2 table for ERp vs. metastases and obtain counts
+a<-xtabs(~ERp+metastases, data=samplexprs)
+b<-data.frame(b1=c(a), b2=rep(as.numeric(colnames(a)), rep(dim(a)[1],dim(a)[2])), b3=rep(as.numeric(rownames(a)),dim(a)[2]))
+#   Stacked area chart
+sa <- ggplot(b, aes(x=b3, y=b1, fill=factor(b2)))
+sa + geom_area() + labs(x="ERp", y="count", fill="metastases")
+sa + geom_area(position="fill") + labs(x="ERp", y="proportion", fill="metastases")
+
+# For age+metastases
+#   Create 2x2 table for age vs. metastases and obtain counts
+a<-xtabs(~age+metastases, data=samplexprs)
+b<-data.frame(b1=c(a), b2=rep(as.numeric(colnames(a)), rep(dim(a)[1],dim(a)[2])), b3=rep(as.numeric(rownames(a)),dim(a)[2]))
+#   Stacked area chart
+sa <- ggplot(b, aes(x=b3, y=b1, fill=factor(b2)))
+sa + geom_area() + labs(x="age", y="count", fill="metastases")
+sa + geom_area(position="fill") + labs(x="age", y="proportion", fill="metastases")
+```
+
+## RMD_example 2.15: Time series plot
+
+```{r}
+# Connect observations, ordered by x value
+t <- ggplot(samplexprs, aes(x=age, y=J00129, group=metastases))
+t + geom_line(aes(colour=factor(metastases)), size=1)
+```
+
+## RMD_example 2.16: 3d scatterplot
+
+```{r}
+# Install the package "lattice", then load it into R
+library(lattice)
+
+# 3d scatterplot
+cloud(age~J00129+Contig29982_RC, data=samplexprs)
+cloud(AA01~SF58+LD37, data=exprs_sig)
+#    lattice in the 3rd dim
+xyplot(Contig29982_RC~J00129 | factor(metastases), data=samplexprs)
+xyplot(Contig29982_RC~J00129 | factor(ERp), data=samplexprs)
+#    map the 3rd dim to colors
+d3c <- ggplot(samplexprs, aes(J00129, Contig29982_RC))
+d3c + geom_point(aes(colour=age))
+d3c + geom_point(aes(colour=factor(metastases)))
+d3c + geom_point(aes(colour=factor(ERp)))
+#    lay out panels in the 3rd dim
+d3c + geom_point() + facet_grid(.~metastases)
+d3c + geom_point() + facet_grid(.~ERp)
+```
+
+## RMD_example 2.17: Scatterplot matrices
+
+```{r}
+pairs(samplexprs[,c('age','ERp','J00129','Contig29982_RC')])
+pairs(samplexprs[,c('age','ERp','J00129','Contig29982_RC')], col=as.integer(samplexprs[,'metastases'])+1)
+pairs(samplexprs[,c('age','ERp','J00129','Contig29982_RC')], col=as.integer(samplexprs[,'metastases'])+1,
+      panel=panel.smooth)
+```
+
+## RMD_example 2.18: Heatmap
+
+```{r}
+# Heatmap
+a <- exprs_sig[sample(1:dim(exprs_sig)[1], size=70),]
+#   no dendrogram
+heatmap(as.matrix(a), Rowv=NA, Colv=NA,
+        xlab="patients", ylab="genes",
+        cexRow=0.5, cexCol=0.6)
+#   with dendrogram
+heatmap(as.matrix(a),
+        xlab="patients", ylab="genes",
+        cexRow=0.5, cexCol=0.6)
+#   with different color schemes
+#     install the package "RColorBrewer", then load it into R
+library(RColorBrewer)
+
+heatmap(as.matrix(a), col=brewer.pal(9, "BuGn"),
+        xlab="patients", ylab="genes",
+        cexRow=0.5, cexCol=0.6)
+
+#   use heatmap.2 and self-set dendrogram
+#     install packages "graphics", "gplots", "RColorBrewer"", then load them into R
+library(graphics)
+library(gplots)
+library(RColorBrewer)
+
+a <- exprs_sig[sample(1:dim(exprs_sig)[1], size=70),]
+hcpat <- hclust(dist(t(a)), method="average")
+dendpat <- as.dendrogram(hcpat)
+hcgene <- hclust(as.dist(1-cor(t(a))), method="average")
+dendgene <- as.dendrogram(hcgene)
+
+#       create a blue -> purple colour palette
+jBuPuFun <- colorRampPalette(brewer.pal(n = 9, "BuPu"))
+paletteSize <- 256
+jBuPuPalette <- jBuPuFun(paletteSize)
+
+heatmap.2(as.matrix(a), Rowv=dendgene, Colv=dendpat, col=jBuPuPalette,
+          xlab="patients", ylab="genes", scale="none", trace="none",
+          cexRow=0.5, cexCol=0.6, density.info="none")
+```
+

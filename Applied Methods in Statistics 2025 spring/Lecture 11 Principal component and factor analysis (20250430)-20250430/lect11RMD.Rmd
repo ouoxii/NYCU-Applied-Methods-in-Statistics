@@ -1,0 +1,97 @@
+---
+title: 'Lecture 11: Principal component and factor analyses'
+output: html_document
+date: "2025/4/30"
+---
+
+# Principal component analysis
+
+## RMD_example 11.1: Read 分類熱門照片 (picture.csv)
+
+```{r}
+# import the csv file into R
+#   note: stringsAsFactors=TRUE will screw up conversion to numeric!
+picture<-read.csv("picture.csv", header=TRUE, fileEncoding="BIG5")
+dim(picture)
+head(picture)
+
+# 原本"上傳時間"的單位為" UNIX timestamp x 10^-8"
+# 將上傳時間做轉換，以"天數"為單位，並相較於最早上傳的時間，計算出每筆資料與最早上傳的時間差
+picture[,c("上傳時間")]<-picture[,c("上傳時間")]*10^8
+t0<-as.POSIXlt(as.numeric(min(picture[,c("上傳時間")])), origin="1970-01-01", tz="GMT")
+tt<-as.POSIXlt(as.numeric(picture[,c("上傳時間")]), origin="1970-01-01", tz="GMT")
+picture[,c("上傳時間")]<-as.numeric(difftime(tt, t0, unit="day"))
+
+head(picture)
+```
+
+## RMD_example 11.2: PCA using the covariance matrix (original measurements)
+
+```{r}
+princov<-princomp(picture[,2:8], cor=F)
+summary(princov)
+print(princov$loadings, digits=7, cutoff=0.0000001)
+#   show a scree plot.
+screeplot(princov, type="line", main="Scree plot")
+#   plot 1st vs. 2nd PCs
+x<-princov$scores[,1]
+y<-princov$scores[,2]
+plot(x, y, xlab="PC 1", ylab="PC 2", main="PCA with Cov", type="n")
+text(x, y, labels=picture[,1], cex=.7)
+legend("topright", c("女生個人","男生個人"), pch ='12')
+```
+
+## RMD_example 11.3: PCA using the correlation matrix (standardized variables)
+
+```{r}
+princor<-princomp(picture[,2:8], cor=T)
+summary(princor)
+print(princor$loadings, digits=7, cutoff=0.0000001)
+#   show a scree plot.
+screeplot(princor, type="line", main="Scree plot")
+#   plot 1st vs. 2nd PCs
+x<-princor$scores[,1]
+y<-princor$scores[,2]
+plot(x, y, xlab="PC 1", ylab="PC 2", main="PCA with Cor", type="n")
+text(x, y, labels=picture[,1], cex=.7)
+legend("topright", c("女生個人","男生個人"), pch ='12')
+```
+
+## RMD_example 11.4: Factor analysis
+
+We will perform a factor analysis with the number of factors = 3. 
+
+```{r}
+factfit <- factanal(picture[,2:8], factors=3, rotation="none")
+print(factfit, digits=7, cutoff=0.0000001, sort=TRUE)
+```
+
+The factor loadings are rotated using the varimax method, and the factor scores are estimated using the regression method.  
+
+```{r}
+factfit <- factanal(picture[,2:8], factors=3, scores="regression", rotation="varimax")
+print(factfit, digits=7, cutoff=0.0000001, sort=TRUE)
+
+# Print out the factor scores:
+#  Every observation (picture) has scores on all 3 factors!
+head(factfit$scores, n=25)
+```
+
+To plot the scree plot, we can do
+
+```{r}
+# Install package "psy" first, then load them into R
+library(psy)
+scree.plot(factfit$correlation)
+```
+
+We then plot 1st vs. 2nd factor scores.
+
+```{r}
+x<-factfit$scores[,1]
+y<-factfit$scores[,2]
+plot(x, y, xlab="Factor score 1", ylab="Factor score 2", main="Factor analysis", type="n")
+text(x, y, labels=picture[,1], cex=.7)
+legend("topright", c("女生個人","男生個人"), pch ='12')
+```
+

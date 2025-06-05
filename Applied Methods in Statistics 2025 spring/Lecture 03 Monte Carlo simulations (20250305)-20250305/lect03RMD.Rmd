@@ -1,0 +1,479 @@
+---
+title: 'Lecture 3: Monte Carlo simulations'
+output: html_document
+date: "2025/3/5"
+---
+
+# Dicrete probability
+
+The probability of an event happening is the proportion of times it happens if we repeat the choice over and over independently and under the same condition.
+
+## RMD_example 3.1: Example 1 
+
+I have 2 red beads and 3 blue beads in a bag and I pick one at random, what is the probability of picking a red one? By the above definition, the answer is 2/5 or 40%. 
+
+### RMD_example 3.2: Monte Carlo simulations
+
+Computers provide a way to actually perform the experiment described above. Random number generators permit us to mimic the process of picking at random. An example is the `sample` function in R. Here is the example above. We first use the function `rep` to generate the beads.
+
+```{r}
+beads <- rep( c("red", "blue"), times = c(2,3))
+beads
+```
+
+To pick a bead at random we simply type
+
+```{r}
+sample( beads, 1)
+```
+
+Now, above we used the phrase "over and over". Technically, we can't repeat this over and over, but we can repeat the experiment a large enough number of times to make it practically equivalent. This is referred to as a _Monte Carlo_ simulation. The `replicate` function permits us repeat the same task, say, $B$ times:
+
+```{r}
+B <- 10^5
+events <- replicate( B, sample( beads, 1))
+```
+
+We can now see if in fact, our definition is in agreement with this simulation. We introduce a two new useful functions, `table` and `prop.table`. The function `table` quickly tabulates the outcomes
+
+```{r}
+tab <- table(events)
+tab
+```
+
+and `prop.table` gives us the proportions:
+
+```{r}
+prop.table(tab)
+```
+
+Now, before we continue, let's point out that `sample` can pick more than one element. However, this selection occurs _without replacement_.  Note what happens when we ask to select five beads:
+
+```{r}
+sample(beads, 5)
+sample(beads, 5)
+```
+
+This results in a re-arrangement that always have three blue and two red beads since once one bead is selected it is not returned. If we ask that six beads be selected, we get an error
+
+```{r, eval=FALSE}
+sample(beads, 6)
+```
+
+`Error in sample.int(length(x), size, replace, prob) : 
+  cannot take a sample larger than the population when 'replace = FALSE'`
+
+To repeat the same experiment of picking one out of 5, over and over, we need to sample _with replacement_. We can tell `sample` to do this as many times as we want:
+
+```{r}
+events <- sample(beads, B, replace=TRUE) # default is FALSE
+prop.table( table( events ) )
+```
+
+This code is equivalent to what we did above with `replicate`. 
+
+## RMD_example 3.3: Example 2
+
+1. I have a deck of cards. I take two cards (without replacement). What is the probability that the first card is the three of hearts: 
+
+$$ \mbox{Pr}(\mbox{first card is } 3\heartsuit) $$ 
+
+2. Given that the first card is not the three of hearts what is the probability that the second one is the three of hearts:
+
+$$ \mbox{Pr}(\mbox{second card is } 3\heartsuit \mid \mbox{first card is not } 3\heartsuit ) $$
+
+### Theoretical calculation 
+
+Before continuing we quickly introduce the `paste` function which can be quite useful. We use it to create strings by joining smaller strings. For example, if we have the number of suit of card we can get the card name like this:
+
+```{r}
+number <- "Three"
+suit <- "Hearts"
+paste(number, suit)
+```
+
+To see why is this useful. We will use the function `expand.grid` to generate all possible combinations. Here is a quick example:
+
+```{r}
+expand.grid(letters[1:3], c(2,4))
+```
+
+So here is how we generate a deck of cards:
+
+```{r}
+suits <- c("Diamonds", "Clubs", "Hearts", "Spades")
+numbers <- c("Ace", "Deuce", "Three", "Four","Five", "Six", "Seven", "Eight", "Nine", "Ten", "Jack", "Queen", "King")
+deck <- expand.grid( number=numbers, suit=suits)
+deck <- paste( deck$number, deck$suit)
+deck
+```
+
+To answer the first question above we can simply compute
+
+```{r}
+mean( deck == "Three Hearts")
+```
+
+which is $1/52$. 
+
+Now let's generate all outcomes of picking two cards. For this we use the function `permutations` from the `gtools` package. This function computes, for any list of size `n`, all the different combinations we can get when we select `r` items. So here are all the ways we can chose 2 numbers from a list consisting of 1,2,3:
+
+```{r}
+# install.packages("gtools") # do this if you have not done this before
+library(gtools)
+permutations(3, 2)
+```
+
+Notice that _the order matters_ here: (3,1) is different from (1,3). Also note that (1,1), (2,2) and (3,3) don't appear because once we pick a number it can't appear again.
+
+Optionally, we can add a vector. So if you want to see the possible permutations of two randomly picked letters of letters "a", "b", "c" you could type:
+
+```{r}
+permutations(3, 2, v=letters[1:3])
+```
+
+Instead of using the numbers 1 through 3, the default, it uses what we provided through `v`: the letters "a", "b", "c".
+
+what if the order does not matter? If we want to enumerate the _combinations_, not the _permutations_, since the order does not matter. Note the differences:
+
+```{r}
+permutations(3, 2)
+combinations(3, 2)
+```
+
+In the second line the outcome does not include (2,1) because the (1,2) already was enumerated. Similarly for (3,1) and (3,2).
+
+Now back to our card drawing example. To compute all possible ways we can choose two cards, when the order matters, we type:
+
+```{r}
+hands <- permutations(52, 2, v = deck)
+```
+
+This is a matrix with two columns and `r nrow(hands)` rows. With a matrix we can get the first and second card like this:
+
+```{r}
+first_card <- hands[,1]
+second_card <- hands[,2]
+```
+
+Notice that the conditional probability can be calculated as
+
+$$ \mbox{Pr}( \mbox{second card is } 3\heartsuit \mid \mbox{first card is not } 3\heartsuit ) = \frac{ \mbox{Pr}( (\mbox{second card is } 3\heartsuit) \mbox{ and } (\mbox{first card is not } 3\heartsuit) ) }{ \mbox{Pr}( \mbox{first card is not } 3\heartsuit ) } $$
+
+For the second question, we thus can have as
+
+```{r}
+pb <- mean( first_card != "Three Hearts" ) 
+pab <- mean( (second_card == "Three Hearts") & (first_card != "Three Hearts") )
+pab / pb
+```
+
+which is also $1/51$. 
+
+### Monte Carlo calculation
+
+We now want to calculate above probabilities using Monte Carlo simulations.
+
+```{r}
+B <- 10^7
+
+# the first question
+events <- sample(deck, B, replace=TRUE)
+mean( events == "Three Hearts" ) 
+
+# the second question
+events <- replicate( B, sample(deck, 2) )
+mean( (events[1,] != "Three Hearts") & (events[2,] == "Three Hearts") ) / 
+   mean( events[1,] != "Three Hearts" )
+```
+
+Notice that the replication size `B` in simulations needs to be _large_ relative to the number of possible outcomes. Here, there are $52 \times 51 = 2652$ possible combinations when taking two cards; thus, we set `B=10^7`. 
+
+# Continuous probability
+
+## RMD_example 3.4: Example -- The mouse diets
+
+This data was produced by ordering 24 female mice from the Jackson Lab, where 12 mice were fed with chow diet and 12 high fat (hf) diet. The scientists weighed each mice and obtained this data: 
+
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+dat <- read_csv("femaleMiceWeights.csv")
+# take a look at data
+dat
+```
+
+As an example, we defined the weight distribution for mice with chow diet. Here we define the vector $x$ to contain the weights:
+
+```{r}
+x <- dat %>% filter(Diet=="chow") %>% select(Bodyweight) %>% unlist
+```
+
+## Cumulative distribution functions (CDF)
+
+When summarizing a list of numeric (continuous) values, such as mice weights, it is not useful to construct a distribution that defines a proportion to each possible outcome. Note, for example, that if we measure every single mouse in a very large population of size $n$ with extremely high precision, because no two mice are exactly the same weight, we need to assign the proportion $1/n$ to each observed value and attain no useful summary at all. Similarly, when defining probability distributions, it is not useful to assign a very small probability to every single weight.
+
+When using distributions to summarize numeric data, it is much more practical to define a function that operates on intervals rather than single values. The standard way of doing this is using the _cumulative distribution functions_ (CDF).
+
+## The probability density
+
+Although for continuous distributions the probability of a single value $\mbox{Pr}(X=x)$ is not defined, there is a theoretical definition that has a similar interpretation. The _probability density_ at $x$ is defined as the function $f(x)$ such that 
+
+$$ F(a) = \mbox{Pr}(X\leq a) = \int_{-\infty}^a f(x)\, dx $$
+
+For those that know Calculus, remember that the integral is related to a sum: it is the sum of bars with widths approximating 0. If you don't know Calculus you can think of $f(x)$ as a curve for which the area under that curve up the value $a$ gives you the probability of $X\leq a$. 
+
+## RMD_example 3.5: Normal distribution
+
+We introduce the normal distribution as a useful approximation to many naturally occurring distribution, including that of weight. The cumulative distribution for the normal distribution is defined by a mathematical formula which in R can be obtained with the function `pnorm`. We say that a random quantity is normally distributed with mean `avg` and standard deviation `s` if it's probability distribution is defined by
+
+```{r, eval=FALSE}
+F(a) = pnorm(a, avg, s)
+```
+
+This is useful because if we are willing to use the normal approximation for, say, mouse weight we don't need the entire data set to answer questions such as "what is the probability that a randomly selected mouse is heavier then 27 ounces?". We just need the average weight and standard deviation:
+
+```{r}
+avg <- mean(x)
+s <- sd(x)
+1 - pnorm(27, avg, s)
+```
+
+The normal distribution is derived mathematically: we do no need data to define it. 
+
+## RMD_example 3.6: Monte Carlo simulations
+
+R provides functions to generate normally distributed outcomes. Specifically, the `rnorm` function takes three arguments: size, average (defaults to 0), and standard deviation (defaults to 1) and produced these random numbers. Here is an example of how we could generate data that looks like our reported weights from the normal distribution:
+
+```{r}
+n <- length(x)
+avg <- mean(x)
+s <- sd(x)
+simulated_weights <- rnorm(n, avg, s)
+
+data.frame(simulated_weights=simulated_weights) %>% ggplot(aes(simulated_weights)) + geom_histogram(color="black", binwidth = 1) 
+```
+
+This is one of the most useful functions in R as it will permit us to generate data that mimics natural events and answer questions related to what could happen by chance by running Monte Carlo simulations.
+
+For example, if we pick 12 mice at random, what is the distribution of the heaviest mouse? The following Monte Carlo helps us answer that question:
+
+```{r}
+B <- 10000
+heaviest <- replicate(B, {
+  simulated_data <- rnorm(12, avg, s)
+  max(simulated_data)
+})
+```
+
+Here is the resulting distribution:
+
+```{r}
+data.frame(heaviest = heaviest) %>% ggplot(aes(heaviest)) + 
+  geom_histogram(color="black", binwidth = 0.5) 
+```
+
+Note that it does not look normal.
+
+## RMD_example 3.7: Other continuous distributions
+
+The normal distribution is not the only useful theoretical distribution. Other continuous distribution that we may encounter are the student-t, chi-squared, exponential, gamma, beta, and beta-binomial. 
+
+R provides functions to compute the density, the quantiles, the cumulative distribution functions and to generate Monte Carlo simulations. R uses a convention that let's remember the names. Namely using the letters `d`, `q`, `p` and `r` in front of a shorthand for the distribution. We have already seen the functions `dnorm`, `pnorm` and `rnorm` for the normal distribution. The functions `qnorm` gives us the quantiles. For example, we can draw a distribution like this:
+
+```{r}
+x <- seq(-4, 4, length.out = 100)
+data.frame(x, f = dnorm(x)) %>% ggplot(aes(x, f)) + geom_line()
+```
+
+For example for the student-t the shorthand `t` is used so the functions are `dt` for the density, `qt` for the quantiles, `pt` for the cumulative distribution function, and `rt` for Monte Carlos simulation. Repeat the exercise above for the t-distribution with 3 degrees of freedome as well as 30 degrees of freedom. Which looks more like the normal distribution?
+
+```{r}
+x <- seq(-4, 4, length.out = 100)
+nor <- data.frame(x, f = dnorm(x))
+t3 <- data.frame(x, f = dt(x, df=3))
+t30 <- data.frame(x, f = dt(x, df=30))
+
+ggplot() + 
+  geom_line(aes(nor$x, nor$f), col="blue", linetype=1) + 
+  geom_line(aes(t3$x, t3$f), col="red", linetype=1) + 
+  geom_line(aes(t30$x, t30$f), col="black", linetype=2) + 
+  xlab("x, normal: blue, t df=3: red, t df=30: black") + 
+  ylab("f")
+```
+
+# Parametric simulations
+
+## RMD_example 3.8: Monte Carlo simulation for the CLT 
+
+First read the control population:
+
+```{r}
+dat <- read_csv("mice_pheno.csv")
+controlPopulation <- filter(dat, Sex == "F" & Diet == "chow") %>% select(Bodyweight) %>% unlist
+```
+
+Then, build a function that automatically generates a t-statistic under the null hypothesis for any sample size of `n`
+
+```{r}
+ttestgenerator <- function(n) {
+  # sample cases from controls because we are modelling the null
+  cases <- sample(controlPopulation, n)
+  controls <- sample(controlPopulation, n)
+  tstat <- (mean(cases)-mean(controls)) / sqrt( var(cases)/n + var(controls)/n )
+return(tstat)
+}
+```
+
+Simulate 1000 t-statistics
+
+```{r}
+ttests <- replicate(1000, ttestgenerator(30))
+```
+
+With 1,000 Monte Carlo simulated occurrences of this random variable (t-statistic), we can now get a glimpse of its distribution:
+
+```{r}
+hist(ttests)
+```
+
+So is the distribution of this t-statistic well approximated by the normal distribution? We can use the quantile-quantile (q-q) plots: if points fall on the identity line, it means the approximation is a good one.
+
+```{r}
+qqnorm(ttests)
+abline(0,1)
+```
+
+This looks like a very good approximation. For this particular population, a sample size of 30 was large enough to use the CLT approximation. How about 3?
+
+```{r}
+ttests <- replicate(1000, ttestgenerator(3))
+qqnorm(ttests)
+abline(0,1)
+```
+
+Now we see that the large quantiles, referred to by statisticians as the tails, are larger than expected (below the line on the left side of the plot and above the line on the right side of the plot). 
+
+We know that when the sample size is not large enough and the population values follow a normal distribution, then the t-distribution is a better approximation. Our simulation results seem to confirm this:
+
+```{r}
+ps <- (seq(0,999)+0.5)/1000
+qqplot(qt(ps,df=2*3-2), ttests, xlim=c(-6,6), ylim=c(-6,6))
+abline(0,1)
+```
+
+The t-distribution is a much better approximation in this case, but it is still not perfect. This is due to the fact that the original data is not that well approximated by the normal distribution.
+
+```{r}
+qqnorm(controlPopulation)
+qqline(controlPopulation)
+```
+
+## RMD_example 3.9: Parametric simulations for the observations
+
+For a parametric simulation, we take parameters estimated from the real data (here the mean and the standard deviation), and plug these into a model (here the normal distribution). 
+
+For the case of weights, we could use our data on mice with chow diet, 
+
+```{r}
+dat <- read_csv("femaleMiceWeights.csv")
+x <- dat %>% filter(Diet=="chow") %>% select(Bodyweight) %>% unlist
+```
+
+where the average weight and standard deviation are
+
+```{r}
+mean(x)
+sd(x)
+```
+
+and where the weight distribution is approximately normal. We can then generate the (control) population using `rnorm`, and modify the `ttestgenerator` function as follows:
+
+```{r}
+avg <- mean(x)
+s <- sd(x)
+
+ttestgenerator <- function(n, mean=avg, sd=s) {
+  cases <- rnorm(n, mean, sd)
+  controls <- rnorm(n, mean, sd)
+  tstat <- (mean(cases)-mean(controls)) / sqrt( var(cases)/n + var(controls)/n )
+return(tstat)
+}
+```
+
+Do 1000 simulations for sample size 3, and obtain its distribution:
+
+```{r}
+n <- 3
+ttests <- replicate(1000, ttestgenerator(n))
+hist(ttests)
+
+qqnorm(ttests)
+abline(0,1)
+
+ps <- (seq(0,999)+0.5)/1000
+qqplot(qt(ps,df=2*n-2), ttests, xlim=c(-6,6), ylim=c(-6,6))
+abline(0,1)
+```
+
+# Nonparametric simulations
+
+## RMD_example 3.10: Bootstrap
+
+In practice, we do not have access to all values in the population. Or the distribution that the random sample belongs to is either unknown or too complicated to generate data from. Therefore, we can’t perform a simulation as done above. Bootstrap can be useful in these scenarios. It allows us to generate the underlying distribution using the observed sample (i.e., nonparametric (Monte Carlo) simulations).
+
+We are back to the scenario where we only have 12 measurements for the control group.
+
+```{r}
+dat <- read_csv("femaleMiceWeights.csv")
+control <- dat %>% filter(Diet=="chow") %>% select(Bodyweight) %>% unlist
+sd(control)
+```
+
+We use the sample standard deviation $s_{X}$ to estimate the population standard deviation $\sigma_{X}$. To know how good this estimation is, we like to obtain standard error $\sqrt{{\rm var}(s_{X})}$ and the 95% CI for $\sigma_{X}$. Using bootstrap, these are
+
+```{r}
+B <- 1000
+n <- 12
+M <- numeric(B)
+for (b in 1:B) {
+  i <- sample(1:n, size = n, replace = TRUE)
+  M[b] <- sd(control[i])
+}
+sd(M)
+quantile(M, c(0.025, 0.975))
+```
+
+## RMD_example 3.11: Permutation tests
+
+We have computed a summary statistic, the difference in mean, to determine if the observed difference was significant. 
+
+Here is how we generate a null distribution by shuffling the data 1,000 times to 1,000 null mean differences: 
+
+```{r}
+# read observed data
+dat <- read.csv("femaleMiceWeights.csv")
+
+library(dplyr)
+control <- filter(dat,Diet=="chow") %>% select(Bodyweight) %>% unlist
+treatment <- filter(dat,Diet=="hf") %>% select(Bodyweight) %>% unlist
+obsdiff <- mean(treatment)-mean(control)
+
+# perform permutation 1,000 times
+N <- 12
+avgdiff <- replicate(1000, {
+  all <- sample(c(control,treatment))
+  newcontrols <- all[1:N]
+  newtreatments <- all[(N+1):(2*N)]
+  return(mean(newtreatments) - mean(newcontrols))
+})
+
+hist(avgdiff)
+abline(v=obsdiff, col="red", lwd=2)
+```
+
+How many of the null mean differences are bigger than the observed value? That proportion would be the p-value for the null. We add a 1 to the numerator and denominator to account for misestimation of the p-value.
+
+```{r}
+(sum(abs(avgdiff) > abs(obsdiff)) + 1) / (length(avgdiff) + 1)
+```
+

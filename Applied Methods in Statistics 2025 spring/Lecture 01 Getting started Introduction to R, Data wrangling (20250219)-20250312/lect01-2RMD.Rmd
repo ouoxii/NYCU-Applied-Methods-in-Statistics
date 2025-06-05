@@ -1,0 +1,394 @@
+---
+title: 'Lecture 1-2: Data wrangling'
+output: html_document
+date: "2025/2/19"
+---
+
+# Data import
+
+Usually the first step in data analysis is getting the data in a form that permits analysis, for example, importing the data into the R environment. 
+
+The are several function in the base package available for reading data. A Google search of "how do I import data into R?" gets us to
+
+```{r,eval=FALSE}
+?read.table
+?read.csv
+?read.delim
+```
+
+From the help file we see that we need that we need
+
+> the name of the file which the data are to be read from. Each row of the table appears as one line of the file. If it does not contain an absolute path, the file name is relative to the current working directory, getwd().
+
+# Example
+
+We took a poll of our students to obtain (self-reported) height and gender. Our task is to describe this list of heights to someone that has no idea what human adults look like.
+
+We have organized the data we collected as a file `ist5575-heights.csv`.
+
+# RMD_example 01-2.1: Different ways to import data into R
+
+## Option 1: Download file with your browser to your working directory
+
+You can navigate to the file `ist5575-heights.csv` in e3 lecture 01. Once you have this file in your working directory, then you can simply read it in like this:
+
+```{r, eval=FALSE}
+dat <- read.csv("ist5575-heights.csv")
+```
+
+## Option 2: Read from within R 
+
+You can actually read these files directly to your R session in the following way:
+
+```{r}
+filename <- "https://ghuang.stat.nycu.edu.tw/course/applstat25/files/data/ist5575-heights.csv"
+dat <- read.csv(filename)
+```
+
+## Option 3: Download from within R 
+
+Although option 2 is very convenient, you may want to have the data file on your hard disk. For example, this gives you complete control of the reproducibility of your ananlysis. In option 1 downloaded the file using a browser, but you can do this from within R.
+
+```{r, eval=FALSE}
+# save the file directly from the internet to your working directory
+url <- "https://ghuang.stat.nycu.edu.tw/course/applstat25/files/data/ist5575-heights.csv"
+filename <- "ist5575-heights.csv"
+download.file(url, destfile=filename)
+
+# then read it in like this:
+dat <- read.csv(filename)
+```
+
+Note, in above data impoting, we make assignments in R: we use `<-`. We can also use the equal sign `=` although here we try to stick to `<-` to make it very clear it is an assignment and not logical statement.
+
+We also note that we have put the content of what comes out of `read.csv` into an _object_. We picked the object name `dat`. 
+
+So what is `dat` exactly? We can get a quick summary of what an object is with the function `str` (stands for structure)
+
+```{r}
+str(dat)
+```
+
+Here we see that this object is a `data.frame`. These are one of the most widely used data types in R. They are particularly useful for storing tables. 
+
+# RMD_example 01-2.2: Data import with `readr` and `tibble` data type
+
+We will first need to load `tidyverse` that contain `readr`. Then use the function
+`read_csv` in `readr` to import data.
+
+```{r}
+# install.packages("tidyverse") # do this if you have not done this before
+library(tidyverse)
+datib <- read_csv("https://ghuang.stat.nycu.edu.tw/course/applstat25/files/data/ist5575-heights.csv")
+```
+
+This object `datib` is now a special type of `data.frame` called `tibble` that has a nicer printing method. We can now simply evaluate an expression with just the object and see a meaningful summary instead of everything.
+
+```{r}
+datib
+```
+
+## Creating tibbles
+
+Most other R packages use regular data frames (e.g., `dat`), so you might want to coerce a data frame to a tibble. You can do that with 
+
+```{r}
+as_tibble(dat)
+```
+
+You can create a new tibble from individual vectors with `tibble()`
+
+```{r}
+tibble(
+  x = 1:5, 
+  y = c(2,4,5,6,8), 
+  z = x ^ 2 + y
+)
+```
+
+Another way to create a tibble is with `tribble()`, short for transposed tibble. `tribble()` is customised for data entry in code: column headings are defined by formulas (i.e. they start with `~`), and entries are separated by commas. 
+
+```{r}
+tribble(
+  ~x, ~y, ~z,
+  "a", 2, 3.6,
+  "b", 1, 8.5,
+  "c", 4, 7.4
+)
+```
+
+Some older functions don’t work with `tibble`. If you encounter one of these functions, use `as.data.frame()` to turn a tibble back to a `data.frame`:
+
+```{r, eval=FALSE}
+as.data.frame(datib)
+```
+
+# RMD_example 01-2.3: Data manipulation with base functions
+
+Now we want to describe the heights in `dat` (a `data.frame`). We could simply report the list of numbers. But there is a problem. Take a look at the entries:
+
+```{r, eval=FALSE}
+View(dat)
+```
+
+Notice these not all entries are numbers. Furthermore, they are not all in inches. So what to do? We need to wrangle.
+
+## Extracting columns
+
+To extract columns from the data.frame we use the `$` character like this:
+
+```{r, eval=FALSE}
+dat$Timestamp
+```
+
+This now gives us a vector. We can access elements of the vector using the `[` symbol:
+
+```{r}
+dat$Timestamp[2]
+```
+
+## Quick review of vectors
+
+Vector are a sequence of data elements of the same type. Many of the operations used to analyze data are applied to vectors. In R vectors can be numeric, characters or logical. 
+
+The most basic way to creat a vector is with the function `c`
+```{r}
+x <- c(1, 2, 3, 4, 5)
+```
+
+Two very common ways of generating vectors are using `:` or the `seq` function:
+
+```{r}
+x <- 1:5
+x <- seq(1, 5)
+```
+
+Vecotrs can have names
+
+```{r}
+names(x) <- letters[1:5]
+x
+```
+
+## Coercion
+
+Vectors need to be homogenous. But when R is instructed to create a vector of different types, it does not give an error. Instead it tries to _coerce_ values to be the same. Here is an example:
+
+```{r}
+height <- c(60, 59, 55, "5'5", 70)
+height
+```
+
+Note that no warning or error was given. It simply changed everything to a character. This is important to know because sometimes we make a mistake in entering data and receive no error message.
+
+# RMD_example 01-2.4: Data manipulation with `dplyr`
+
+R (base) provides incredibly powerful and flexible language for data manipulation. However, the syntax is somewhat hard to get used to. We will therefore  introducing a package that makes the syntax much more like the English language. This package is `dplyr`, part of `tidyverse`.
+
+```{r, message=FALSE}
+library(dplyr)
+```
+
+When using `dplyr` we recommend reading in data with the functions in the `readr` package, which will create `tibble` datset.
+
+```{r}
+library(readr)
+datib <- read_csv("https://ghuang.stat.nycu.edu.tw/course/applstat25/files/data/ist5575-heights.csv")
+```
+
+## Selecting columns
+
+Right, we are interested in looking at heights. We can select just that column using:
+
+```{r}
+select(datib, contains("height"))
+```
+
+Some additional options to select columns based on a specific criteria include
+
+1. `ends_with()` = Select columns that end with a character string
+2. `contains()` = Select columns that contain a character string
+3. `matches()` = Select columns that match a regular expression
+4. `one_of()` = Select columns names that are from a group of names
+
+We have a problem: this is a `character`. We want numbers. 
+
+## Renaming columns
+
+Before we continue it will be convenient to change the names of our columns to something more convenient.
+
+```{r}
+names(datib) <- c("time", "gender", "height")
+```
+
+## Vectorization
+
+```{r}
+height <- c(60, 59, 55, "5'5", 70)
+height[3]
+as.numeric(height[3])
+```
+
+One powerful feature of R is that we can _vectorize_ most operation
+
+```{r}
+as.numeric(height) 
+```
+
+Note now we do receive an warning. This is because R has no idea how to convert "5'5" to a number.
+
+## Missing values
+
+Note in the `NA` value in the object above. 
+
+These are missing values. We can find out which values are missing using the function 
+
+```{r, eval=FALSE}
+?is.na
+```
+
+## Adding columns
+
+```{r}
+datib <- mutate(datib, numeric_height=as.numeric(height), original=height)
+```
+
+## Subsetting observations
+
+To see all the rows in which we have problems:
+
+```{r}
+filter(datib, is.na(numeric_height))
+```
+
+## Arranging rows 
+
+To arrange (or re-order) rows by `numeric_height`, we can do
+
+```{r}
+arrange(datib, numeric_height)
+```
+
+## Grouping operations
+
+If we want to get all the mean height for each gender type, we can first group the data by `gender`
+
+```{r}
+datib <- group_by(datib, gender)
+```
+
+Note the grouping doesn't change how the data looks
+
+```{r}
+datib
+```
+
+It changes how it acts with the other `dplyr` functions (e.g., `summarise`)
+
+```{r}
+summarise(datib, mean.height=mean(numeric_height, na.rm=T))
+```
+
+To removing grouping, use `ungroup`
+
+```{r}
+datib <- ungroup(datib)
+```
+
+## Pipe operator
+
+The pipe operation `%>%` in dplyr allows you to pipe the output from one function to
+the input of another function. Instead of nesting functions (reading
+from the inside to the outside), the idea of of piping is to read the
+functions from left to right.
+
+Now in our case, we pipe the filtered data to the function that will 
+select the column `height` 
+
+```{r}
+filter(datib, is.na(numeric_height)) %>% select(height) 
+```
+
+Let's see more
+
+```{r}
+filter(datib, is.na(numeric_height)) %>% select(height) %>% print(n=21)
+```
+
+## `gsub`
+
+One of the most useful functions for data wrangling is `gsub`. It let us search for characters and substitutes it for others. Here is an example:
+
+```{r}
+x <- datib$height[109:116]
+x
+```
+
+Note that we are using both `'` and `ft` as the same thing. To simplify the problem we want to substitute one for the other. `gsub` does the trick:
+
+```{r}
+x <- gsub("ft", "'", x)
+x
+```
+
+The word inches is not doing anything here so we might as well remove it.
+
+```{r}
+x <- gsub("inches", "", x)
+x
+```
+
+We are now ready to start fixing the height data:
+
+```{r}
+datib <- mutate(datib, height=gsub("ft", "'", height)) %>% 
+         mutate(height=gsub("\"|inches|\ |''", "", height))
+```
+
+## Functions 
+
+Up to now we have used prebuilt functions. However, many times we have to construct our own. We can do this in R using the `function`:
+
+```{r}
+avg <- function(x){
+  return( sum(x) / length(x) )
+}
+
+avg( 1:5 )
+```
+
+Here we construct a more complicated function that changes 5'4 to `5*12+4`
+
+```{r}
+fixheight <- function(x){
+  y <- strsplit(x, "'")
+  ret <- sapply(y, function(z){
+    ifelse( length(z)>1, as.numeric(z[1])*12 + as.numeric(z[2]),
+            as.numeric(z[1]) )
+  })
+  return(ret)
+}
+```
+
+We can now test the function
+
+```{r}
+fixheight( "70")
+fixheight( "5'10")
+fixheight( c("5'9","70","5'11"))
+```
+
+Finally we can mutate our data:
+
+```{r}
+datib <- mutate(datib, height=fixheight(height)) %>% select(-numeric_height)
+```
+
+The last call to select removes the now unecessary column `numeric_height`. Let's see the result:
+
+```{r}
+filter(datib, is.na(height)) %>% select(height) 
+```
+
+We have removed all the NAs.
+

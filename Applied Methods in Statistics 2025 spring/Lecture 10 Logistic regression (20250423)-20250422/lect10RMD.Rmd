@@ -1,0 +1,49 @@
+---
+title: 'Lecture 10: Logistic regreesion'
+output: html_document
+date: "2016/12/12"
+---
+
+## RMD_example 10.1: Read 六都房地產實價登錄資料 (house.csv)
+
+```{r}
+# Import the csv file into R
+#   note: stringsAsFactors=TRUE will screw up conversion to numeric!
+house <- read.csv("house.csv", header=TRUE, fileEncoding="BIG5")
+
+dim(house)
+head(house)
+```
+
+## RMD_example 10.2: Chi2 / Fisher's exact test for 豪宅 vs. 車位
+
+```{r}
+#   Install packages "gmodels" and "epiR"first, then load them into R
+library(gmodels)
+library(epiR)
+
+每平方公尺單價 <- house[,"每平方公尺單價"]
+
+豪宅<-rep(0, length(每平方公尺單價))
+豪宅[!is.na(每平方公尺單價) & 每平方公尺單價>200000]<-1
+豪宅[is.na(每平方公尺單價)]<-NA
+
+車位 <- house[,"車位"]
+車位[車位=="無"]<-0
+車位[車位=="有"]<-1
+車位 <- as.numeric(車位)
+
+CrossTable(車位, 豪宅, prop.chisq=F, chisq=T, fisher=T)
+```
+
+## RMD_example 10.3: Logistic regression analysis of 豪宅 on 車位 and 有無管理組織
+
+```{r}
+有無管理組織<-house[,"有無管理組織"]
+有無管理組織[有無管理組織=="無"]<-0
+有無管理組織[有無管理組織=="有"]<-1
+有無管理組織<-as.numeric(有無管理組織)
+
+logmEag<-glm(豪宅~車位+有無管理組織, family=binomial)
+summary(logmEag)
+```

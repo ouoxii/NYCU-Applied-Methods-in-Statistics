@@ -1,0 +1,74 @@
+---
+title: "Lecture 4: Hypothesis testing for continuous variables"
+output: html_document
+date: "2025/3/12"
+---
+
+# RMD_example 4.1: Read the Gene expression microarray data (samplexprs.csv) 
+
+```{r}
+# Import the csv file into R
+#   note: stringsAsFactors=TRUE will screw up conversion to numeric!
+samplexprs <- read.csv("samplexprs.csv", header=TRUE, stringsAsFactors=FALSE)
+
+dim(samplexprs)
+head(samplexprs[,1:10])
+```
+
+# RMD_example 4.2: One-sample t-test
+
+```{r}
+# Summary statistics for exprs of gene J00129
+#   Install package "psych" first, then load it into R
+library(psych)
+J00129<-samplexprs[,"J00129"]
+describe(J00129)
+
+# One-sample t-test
+t.test(J00129, mu=-0.5) # Ho: mu=-0.5
+```
+
+# RMD_example 4.3: Two-sample t-test
+
+```{r}
+# summary statistics of J00129 by metastases
+metastases<-samplexprs[,"metastases"]
+describeBy(J00129, metastases)
+
+# two-sample t-test for J00129 over metastases
+t.test(J00129~metastases, var.equal=T, na.action="na.omit")
+t.test(J00129~metastases, var.equal=F, na.action="na.omit")
+var.test(J00129~metastases, na.action="na.omit")
+```
+
+# RMD_example 4.4: ANOVA
+
+```{r}
+# summary statistics of J00129 by ERp
+ERp<-samplexprs[,"ERp"]
+describeBy(J00129, ERp)
+
+# more than two samples test for J00129 over ERp
+anova(lm(J00129~as.factor(ERp)))
+```
+
+# RMD_example 4.5: Paired t-test
+
+```{r}
+# summary statistics for exprs of gene Contig29982_RC
+Contig29982_RC<-samplexprs[,"Contig29982_RC"]
+describe(Contig29982_RC)
+
+# paired t-test for comparing J00129 vs Contig29982_RC
+t.test(J00129, Contig29982_RC, paired=T, na.action="na.omit")
+```
+
+# RMD_example 4.6: Permutation test
+
+```{r}
+library(perm)
+
+# Permutation test for J00129 over metastases
+permTS(J00129~metastases, alternative="two.sided", exact=TRUE)
+permTS(J00129~metastases, alternative="two.sided", metood="pclt")
+```
